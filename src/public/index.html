@@ -1,0 +1,480 @@
+<!--/* Copyright (c) 2025, SECOM CO., LTD. All Rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE. */
+-->
+<!doctype html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8" />
+  <title>MAL和狩</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    :root {
+      --bg: #0b1220;
+      --panel: #121a2a;
+      --panel-2: #0f1726;
+      --text: #e6edf6;
+      --muted: #8ea0bd;
+      --border: #1f2a44;
+      --ok: #49d29e;
+      --ng: #ff6b6b;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      color: var(--text);
+      background: radial-gradient(80% 80% at 50% 0%, #101933 0%, var(--bg) 60%);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .info-block {
+      display: grid;
+      grid-template-columns: 1fr;
+    }
+
+    .statusRow {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+      align-items: center;
+      text-align: center;
+    }
+
+    .chatRow {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .col {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      height: auto;
+    }
+
+    button {
+      padding: 10px 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: linear-gradient(180deg, #1e2a47 0%, #172036 100%);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    button.primary:not(:disabled) {
+      background: linear-gradient(180deg, #2476d3 0%, #1559a8 100%);
+      border-color: #1559a8
+    }
+
+    button:disabled {
+      background: var(--panel);
+      color: var(--muted);
+      border-color: var(--border);
+      opacity: 1;
+      cursor: not-allowed;
+    }
+
+    button.primary:disabled {
+      background: var(--panel);
+      border-color: var(--border);
+      color: var(--muted);
+    }
+
+    #timer {
+      font-weight: 800;
+      font-size: 28px;
+    }
+
+    #scores {
+      font-size: 28px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    #lives {
+      font-size: 28px;
+      font-weight: bold;
+      margin-top: 8px;
+    }
+
+    #chatLog {
+      height: 220px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      background: var(--panel-2);
+      border-radius: 8px;
+      padding: 6px;
+      word-break: break-word;
+    }
+
+    .ok {
+      color: var(--ok);
+    }
+
+    .ng {
+      color: var(--ng);
+    }
+
+    #clearScreen {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+
+    #clearBox {
+      background: #121a2a;
+      padding: 30px;
+      border-radius: 12px;
+      text-align: center;
+      max-width: 400px;
+      width: 80%;
+      color: #fff;
+    }
+
+    #roleView {
+      font-size: 14px;
+      line-height: 1.6;
+      font-family: Consolas, "Courier New", monospace;
+      white-space: nowrap;
+      overflow-x: auto;
+      padding: 12px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 6px;
+    }
+
+    input,
+    textarea {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px;
+    }
+
+    input:focus,
+    textarea:focus {
+      outline: none;
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--ok);
+    }
+
+    @media (max-width: 900px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <h1>🧩 MAL和狩</h1>
+  <div class="grid">
+    <div class="col">
+      <h3>ルーム操作</h3>
+      <button id="create" class="primary">ルーム作成</button>
+      <button id="copyRoom" disabled>room id コピー</button>
+      <div class="row" style="margin-top:8px;">
+        <input id="roomId" placeholder="room id" />
+        <div id="mode" style="display:inline-block; margin:0 8px;">
+          <label>
+            <input type="radio" name="mode" value="Normal" checked> Normal
+          </label>
+          <label>
+            <input type="radio" name="mode" value="Hard"> Hard
+          </label>
+        </div>
+        <select id="role">
+          <option value="">役割自動</option>
+          <option value="A">A（指示者）</option>
+          <option value="B">B（回答者）</option>
+        </select>
+        <button id="join">参加</button>
+        <button id="ready" class="primary" disabled>Ready</button>
+        <div id="system">待機中…</div>
+      </div>
+      <div id="status">未参加</div>
+      <div id="players">A: × / B: ×</div>
+    </div>
+    <div class="col">
+      <div class="grid statusRow">
+        <h3>タイマー</h3>
+        <h3>ライフ</h3>
+        <h3>スコア</h3>
+        <div id="timer">--:--</div>
+        <div id="lives">-</div>
+        <div id="scores">--</div>
+      </div>
+    </div>
+
+    <div class="grid info-block" style="margin-top:4px;">
+      <div class="col">
+        <h3>あなたの情報</h3>
+        <div id="challengeTitle">課題: -</div>
+        <pre id="roleView">未開始</pre>
+      </div>
+    </div>
+
+    <div class="grid chatRow">
+      <div class="col">
+        <h3>回答の送信</h3>
+        <input id="answer" type="text" placeholder="回答を入力" disabled />
+        <button id="submit" disabled>送信</button>
+        <div id="result"></div>
+      </div>
+
+      <div class="col">
+        <h3>チャット</h3>
+        <div id="chatLog"></div>
+        <input id="chatMsg" placeholder="メッセージ" maxlength="100" />
+        <button id="sendChat">送信</button>
+      </div>
+    </div>
+
+
+
+    <div id="clearScreen">
+      <div id="clearBox"></div>
+    </div>
+
+    <script>
+      const $ = id => document.getElementById(id);
+      const setDisabled = (ids, d) => ids.forEach(id => { const el = $(id); if (el) el.disabled = d; });
+      const appendLog = msg => {
+        const log = $('chatLog');
+        const el = document.createElement('div');
+        el.textContent = msg; log.appendChild(el);
+        log.scrollTop = log.scrollHeight;
+      };
+
+      let CURRENT_ROOM = null;
+      let CURRENT_ROLE = null;
+      let LOCAL_READY = false;
+      let CURRENT_REMAIN_MS = null;
+
+      const socket = io();
+
+      function getSelectedMode() { return document.querySelector('input[name="mode"]:checked')?.value || 'Normal'; }
+
+      // ルーム操作
+      $('create').onclick = () => {
+        const mode = getSelectedMode();
+        socket.emit('createRoom', { mode }, res => {
+          if (res?.roomId) {
+            $('roomId').value = res.roomId;
+            $('status').textContent = `ルーム作成:${res.roomId}`;
+            $('copyRoom').disabled = false;
+          }
+        });
+      };
+
+      $('copyRoom').onclick = async () => {
+        const v = $('roomId').value.trim();
+        if (!v) return;
+        try {
+          await navigator.clipboard.writeText(v);
+          $('status').textContent = `room id をコピー:${v}`;
+        } catch {
+          $('status').textContent = 'コピーできませんでした';
+        }
+      };
+
+      $('join').onclick = () => {
+        const id = $('roomId').value.trim();
+        if (!id) return alert('room id を入力');
+        socket.emit('joinRoom', { roomId: id }, res => {
+          if (!res?.ok) return alert(res?.error || 'join error');
+          CURRENT_ROOM = id;
+          $('status').textContent = '参加完了 / Readyで役割確定';
+        });
+      };
+
+      $('ready').onclick = () => {
+        const mode = getSelectedMode();
+        socket.emit('playerReady', {
+          preferredRole: $('role').value || undefined, mode
+        },
+          res => {
+            if (!res?.ok) {
+              if (res.error === 'WAIT_FOR_PARTNER') {
+                $('system').textContent = '相方参加待ち…';
+              } else {
+                return alert('参加者が揃っていません');
+              }
+            }
+            LOCAL_READY = true;
+            $('system').textContent = res.started ? 'スタート！' : '相方のReadyを待っています…';
+            $('status').textContent = `あなたはReady済み (${res.roleAssigned || '未決定'}) / モード:${res.mode}`;
+            $('ready').disabled = true;
+          });
+      };
+
+      //  回答送信 
+      function sendAnswer() {
+        if (CURRENT_ROLE !== 'B') return;
+        socket.emit('submitAnswer', {
+          roomId: CURRENT_ROOM,
+          answer: $('answer').value.trim(),
+          remainMs: CURRENT_REMAIN_MS 
+        }, res => {
+          if (res?.ok) {
+            $('result').textContent = res.correct ? `正解 +${res.score}` : '不正解';
+          }
+        });
+        $('answer').value = '';
+      }
+
+      $('submit').onclick = sendAnswer;
+      $('answer').onkeydown = e => {
+        if (e.key === 'Enter') {
+          e.preventDefault(); sendAnswer();
+        }
+      };
+
+      //  チャット 
+      $('sendChat').onclick = () => {
+        const msg = $('chatMsg').value; if (!msg) return;
+        socket.emit('chat', { roomId: CURRENT_ROOM, message: msg });
+        $('chatMsg').value = '';
+      };
+
+      // ソケットイベント 
+      socket.on('connect', () => { $('system').textContent = 'サーバ接続OK'; });
+      socket.on('connect_error', e => { $('system').textContent = `接続エラー:${e?.message || e}`; });
+
+      socket.on('roomUpdate', ({ players }) => {
+        $('players').textContent = `A:${players.A ? '✔' : '×'} / B:${players.B ? '✔' : '×'}`;
+        if (players.A && players.B && !LOCAL_READY) $('ready').disabled = false;
+      });
+
+      socket.on('readyUpdate', ({ ready }) => {
+        const a = ready?.A, b = ready?.B;
+        $('players').textContent = `A:${a ? '✔' : '×'} / B:${b ? '✔' : '×'}`;
+      });
+
+      socket.on('roomReset', ({ message }) => {
+        if (!LOCAL_READY) $('system').textContent = message;
+      });
+
+      socket.on('gameStarted', ({ cumulativeScore, role, view, title = '-', lives }) => {
+        CURRENT_ROLE = role; setDisabled(['create', 'join', 'copyRoom', 'ready'], true);
+        if (role === 'B') {
+          setDisabled(['submit'], false); $('answer').disabled = false;
+        } else {
+          setDisabled(['submit'], true); $('answer').disabled = true;
+        }
+        $('challengeTitle').textContent = `課題:${title} / あなたは ${role === 'A' ? '指示者' : '回答者'}`;
+        $('roleView').textContent = view; $('system').textContent = 'スタート！';
+        if (lives !== null && lives !== undefined) {
+          $('lives').textContent = '❤'.repeat(lives) + ` (${lives})`;
+        } else {
+          $('lives').textContent = '---';
+        }
+      });
+
+      socket.on('livesUpdate', ({ lives }) => {
+        if (lives === null || lives === undefined) {
+          $('lives').textContent = '---';
+        } else {
+          $('lives').textContent = '❤'.repeat(lives);
+        }
+      });
+
+      socket.on('timer', ({ remainMs }) => {
+        CURRENT_REMAIN_MS = remainMs;
+        const s = Math.floor(remainMs / 1000);
+        const mm = String(Math.floor(s / 60)).padStart(2, '0');
+        const ss = String(s % 60).padStart(2, '0');
+        $('timer').textContent = `${mm}:${ss}`;
+      });
+
+      socket.on("updateScore", ({ cumulativeScore }) => {
+        $("scores").textContent = `${cumulativeScore}`;
+      });
+
+      socket.on('roundCleared', ({ roundScore, elapsed, cumulativeScore }) => {
+        setDisabled(['create', 'join', 'copyRoom', 'ready', 'submit'], true);
+        $('system').textContent = `正解 +${roundScore}点（${elapsed}s）`;
+        $('scores').textContent = `${cumulativeScore}点`;
+      });
+
+      socket.on('roundTimeout', () => { $('system').textContent = '時間切れ…'; });
+
+      socket.on('answerResult', ({ correct }) => {
+        $('result').textContent = correct ? '正解' : '不正解';
+      });
+
+      socket.on('chat', ({ from, message }) => appendLog(`[${from}] ${message}`));
+
+      socket.on('system', ({ message }) => $('system').textContent = message);
+
+      socket.on('gameFinished', ({ message, totalscore }) => {
+        setDisabled(['submit', 'ready'], true);
+        const cs = $('clearScreen'), box = $('clearBox');
+        cs.style.display = 'flex'; box.innerHTML = '';
+
+        const h2 = document.createElement('h2');
+        h2.textContent = message;
+        const p = document.createElement('p');
+        p.textContent = `最終スコア:${totalscore}点`;
+
+        const restart = document.createElement('button');
+        restart.textContent = 'もう一度遊ぶ';
+        restart.onclick = () => location.reload();
+        const cont = document.createElement('button');
+        cont.textContent = '同じルームで続ける';
+
+        cont.onclick = () => {
+          cs.style.display = 'none';
+          $('scores').textContent = '--';
+          $('challengeTitle').textContent = '課題:-';
+          $('roleView').textContent = '未開始';
+          $('timer').textContent = '--:--';
+          $('system').textContent = '待機中…';
+          $('result').textContent = '';
+          setDisabled(['ready'], true);
+          LOCAL_READY = false; $('answer').disabled = true;
+          setDisabled(['submit'], true);
+          socket.emit('continueGame', { roomId: CURRENT_ROOM });
+        };
+        [h2, p, restart, cont].forEach(el => box.appendChild(el));
+      });
+    </script>
+</body>
+
+</html>
