@@ -239,6 +239,13 @@
       <h3>あなたの情報</h3>
       <div id="challengeTitle">課題: -</div>
       <pre id="roleView">未開始</pre>
+      <div id="viewControls" style="margin-top:8px; text-align:center;">
+        <button id="prevView">＜</button>
+        <span id="viewPage">1 / 6</span>
+        <button id="nextView">＞</button>
+        <input id="jumpToPage" type="number" min="1" max="6" style="width:50px;" />
+        <button id="jumpBtn">移動</button>
+      </div>
     </div>
   </div>
   <div id="clearScreen">
@@ -259,6 +266,8 @@
     let CURRENT_ROLE = null;
     let LOCAL_READY = false;
     let CURRENT_REMAIN_MS = null;
+    let CURRENT_PAGES = 0;
+    let VIEW_PAGE = [];
 
     const socket = io();
 
@@ -315,6 +324,42 @@
           $('status').textContent = `あなたはReady済み (${res.roleAssigned || '未決定'}) / モード:${res.mode}`;
           $('ready').disabled = true;
         });
+    };
+
+    //ページ送り
+    function updateViewDisplay() {
+      $('roleView').textContent = VIEW_PAGE[CURRENT_PAGES] || '未設定';
+      $('viewPage').textContent = `${CURRENT_PAGES + 1} / ${VIEW_PAGE.length}`;
+      $('prevView').disabled = CURRENT_PAGES === 0;
+      $('nextView').disabled = CURRENT_PAGES >= VIEW_PAGE.length - 1;
+
+      // UI表示制御
+      const showPaging = VIEW_PAGE.length >= 2;
+      $('prevView').style.display = showPaging ? 'inline-block' : 'none';
+      $('nextView').style.display = showPaging ? 'inline-block' : 'none';
+      $('viewPage').style.display = showPaging ? 'inline-block' : 'none';
+    }
+
+    $('prevView').onclick = () => {
+      if (CURRENT_PAGES > 0) {
+        CURRENT_PAGES--;
+        updateViewDisplay();
+      }
+    };
+
+    $('nextView').onclick = () => {
+      if (CURRENT_PAGES < VIEW_PAGE.length - 1) {
+        CURRENT_PAGES++;
+        updateViewDisplay();
+      }
+    };
+
+    $('jumpBtn').onclick = () => {
+      const page = parseInt($('jumpToPage').value, 10);
+      if (!isNaN(page) && page >= 1 && page <= VIEW_PAGE.length) {
+        CURRENT_PAGES = page - 1;
+        updateViewDisplay();
+      }
     };
 
     //  回答送信 
@@ -390,8 +435,7 @@
         $('lives').textContent = '---';
       }
     });
-
-
+    
     socket.on('newQuestion', ({ title, view, role }) => {
       console.log('newQuestion received:', { title, view, role });
       CURRENT_ROLE = role;
@@ -400,13 +444,13 @@
       $('system').textContent = '出題中…';
       $('result').textContent = '';
       $('answer').value = '';
-      if (role === 'B') {
-        setDisabled(['submit'], false);
-        $('answer').disabled = false;
-      } else {
-        setDisabled(['submit'], true);
-        $('answer').disabled = true;
-      }
+
+      VIEW_PAGE = Array.isArray(view) ? view : [view];
+      CURRENT_PAGES = 0;
+      updateViewDisplay();
+      const isB = role === 'B';
+      setDisabled(['submit'], !isB);
+      $('answer').disabled = !isB;
     });
 
     socket.on('livesUpdate', ({ lives }) => {
