@@ -31,7 +31,7 @@ app.use(express.json()); // Parse JSON request bodies
 app.use(express.static('public')); // Serve static files from /public
 
 // Specify the JSON file to load
-const f_json = 'sample_challenges.json'; // default: 'sample_challenges.json'
+const f_json = 'challenges.json'; // default: 'challenges.json'
 
 // Shared state containers
 const rooms = new Map(); // roomId → roomData
@@ -61,21 +61,6 @@ try {
 
 // Normalize input string (null-safe, trimmed)
 const normalize = s => (s ?? '').toString().trim();
-
-// Pick a random unused challenge index for a room
-const pickRandomUnusedIndex = r => {
-  const n = challenges.length;
-  if (n <= 1) return 0;
-  r.usedIndices ??= [];
-  const remain = [...Array(n).keys()].filter(i => !r.usedIndices.includes(i));
-  if (!remain.length) {
-
-    // Reset used indices if all challenges have been used
-    r.usedIndices = [];
-    return Math.floor(Math.random() * n);
-  }
-  return remain[Math.floor(Math.random() * remain.length)];
-};
 
 // Match user answer against challenge configuration
 const matchAnswer = (conf, ans) => {
@@ -197,8 +182,20 @@ function startRound(roomId) {
     });
 
   if (candidates.length === 0) {
-    sys(roomId, `モード:${r.mode} に対応する問題がありません`);
-    return;
+    io.to(roomId).emit('gameFinished', {
+      message: `モード:${r.mode} に対応する問題がありません。ゲーム終了します。`,
+      totalscore: r.cumulativeScore ?? 0
+    });
+    Object.assign(r, {
+      status: 'between',
+      round: 0,
+      cumulativeScore: 0,
+      usedIndices: [],
+      currentIdx: undefined,
+      currentSubIndex: undefined,
+      currentBig: undefined
+    });
+    return save(roomId, r);
   }
 
   const { specimen, index } = candidates[Math.floor(Math.random() * candidates.length)];
@@ -210,6 +207,10 @@ function startRound(roomId) {
   if ((r.round ?? 0) === 0) {
     ['A', 'B'].forEach(role => {
       const sid = r.players[role];
+      const rawView = specimen.roles?.[role]?.view;
+      const view = role === 'A'
+        ? Array.isArray(rawView) ? rawView : [rawView || '']
+        : typeof rawView === 'string' ? rawView : '';
       io.to(sid).emit('gameStarted', {
         cumulativeScore: r.cumulativeScore ?? 0,
         role,
@@ -227,7 +228,7 @@ function startRound(roomId) {
   sendQuestion(roomId);
 }
 
-// Send current question to both players
+// Send question to players
 function sendQuestion(roomId) {
   const r = rooms.get(roomId);
 
@@ -239,15 +240,22 @@ function sendQuestion(roomId) {
   r.expiresAt = Date.now() + limitSec * 1000;
 
   // Send question to A
+  const viewA = Array.isArray(r.currentBig.roles?.A?.view)
+    ? r.currentBig.roles.A.view
+    : [r.currentBig.roles?.A?.view || ''];
+
   io.to(r.players.A).emit('newQuestion', {
     title: r.currentBig.title,
     baseScore: r.currentBig.baseScore,
     timeLimitSec: limitSec,
-    view: r.currentBig.roles?.A?.view || '',
+    view: viewA,
     role: 'A'
   });
 
   // Send question to B
+  const viewB = typeof r.currentBig.roles?.B?.view === 'string'
+    ? r.currentBig.roles.B.view
+    : '';
   io.to(r.players.B).emit('newQuestion', {
     title: r.currentBig.title,
     baseScore: r.currentBig.baseScore,
@@ -258,7 +266,7 @@ function sendQuestion(roomId) {
   startTimer(roomId);
 }
 
-// Set player readiness and trigger round if both are ready
+// Set player readiness and trigger
 function setReadyStatus(roomId, socketId, role, cb) {
   const r = rooms.get(roomId);
   if (!r) return cb?.({ ok: false, error: 'ROOM_NOT_FOUND' });
@@ -281,16 +289,6 @@ function setReadyStatus(roomId, socketId, role, cb) {
     return;
   }
   return cb?.({ ok: true, roleAssigned: role, started: false, mode: r.mode });
-}
-
-// Finish current big question and transition to next round
-function finishBigQuestion(roomId) {
-  const r = rooms.get(roomId); if (!r) return;
-  io.to(roomId).emit('bigQuestionFinished', {
-    message: `大問「${r.currentBig.title}」終了！`,
-    totalscore: r.cumulativeScore ?? 0
-  });
-  setTimeout(() => startRound(roomId), 1500);
 }
 
 // API
@@ -450,6 +448,8 @@ io.on('connection', socket => {
     }
     save(roomId, r);
   });
+
+
 
   // Handle chat messages
   socket.on('chat', ({ roomId, message }) => {
