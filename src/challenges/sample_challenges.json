@@ -1,0 +1,654 @@
+[
+  {
+    "title": "検体1",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: メモリ確保時に実行可能属性が指定されているか。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: デバッガ検出に関連するAPI呼び出しは含まれているか。\n YES -> 3-2 (p.5)へ　　NO -> 3-4 (p.7)へ",
+          "2-2: Sleep呼び出しの合計待機時間は10ミリ秒以上か。\n YES -> 3-1 (p.4)へ　　NO -> 3-3 (p.6)へ",
+          "3-1: HTTPS通信を前提としたリクエストが送信され、平文HTTPではないことが確認された。\nこのTLS指定を行っている行を特定せよ。",
+          "3-2: ユーザー操作なしで小さなダイアログが表示。ビープ音やログ出力はなし。\n GUIを直接表示する行を特定せよ。",
+          "3-3: サスペンド状態で作成されたスレッドが、一定時間後に再開・終了された。\n このスレッドの実行再開に関与するAPI呼び出しを含む行を特定せよ。",
+          "3-4: 「hello」という文字列が変換された結果がデバッグ出力に表示された。\n この変換処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_1(void) {\n    MessageBeep(MB_OK);\n    OutputDebugStringA(\"n\");\n    MessageBoxW(0, L\"H\", L\"N\", MB_OK);\n    const wchar_t* benign = L\"https://www.microsoft.com/\";\n    const wchar_t* C2 = L\"https://api.example.com/api\";\n    HINTERNET s = WinHttpOpen(L\"A\", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 0, 0, 0);\n    HINTERNET c = WinHttpConnect(s, L\"www.microsoft.com\", INTERNET_DEFAULT_HTTPS_PORT, 0);\n    HINTERNET q = WinHttpOpenRequest(c, L\"GET\", L\"/\", 0, 0, 0, WINHTTP_FLAG_SECURE);\n    WinHttpSendRequest(q, 0, 0, 0, 0, 0, 0); WinHttpReceiveResponse(q, 0);\n    Sleep(10);\n    DWORD pid = GetCurrentProcessId(); BOOL dbg = IsDebuggerPresent();\n    OutputDebugStringA(\"c\"); Sleep(5);\n    char in[] = \"hello\"; size_t len = 5;\n    unsigned char buf[16]; memcpy(buf, in, len);\n    for (size_t i = 0; i < len; i++) buf[i] ^= 0x5A;\n    char b64[32]; Base64Encode(buf, len, b64, sizeof(b64));\n    OutputDebugStringA(b64);\n    HANDLE hp = GetCurrentProcess();\n    LPVOID r = VirtualAllocEx(hp, 0, 64, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    SIZE_T w = 0; WriteProcessMemory(hp, r, \"data\", 5, &w);\n    HANDLE th = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Sleep, 0, CREATE_SUSPENDED, 0);\n    ResumeThread(th); WaitForSingleObject(th, 100); CloseHandle(th);\n    WinHttpCloseHandle(q); WinHttpCloseHandle(c); WinHttpCloseHandle(s);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "MessageBoxW(0, L\"H\", L\"N\", MB_OK);"
+    }
+  },
+  {
+    "title": "検体2",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 暗号化処理に関連するAPI呼び出しは何回あるか。\n 1回 → 2-1 (p.2)へ　　2回 → 2-2 (p.3)へ",
+          "2-1: デバッガ検出に関連するAPI呼び出しは含まれているか。\n YES -> 3-3 (p.6)へ　　NO -> 3-2 (p.5)へ",
+          "2-2: メモリ確保時に実行可能属性が指定されているか。\n YES -> 3-1 (p.4)へ　　NO -> 3-4 (p.7)へ",
+          "3-1: エラー状態がリセットされ、直後の処理が影響を受ける可能性がある。\n このリセット操作を行っているAPI呼び出しの行を特定せよ。",
+          "3-2: 警告アイコン付きのビープ音が鳴った。\n これに対応するAPI呼び出しの行を特定せよ。",
+          "3-3: 平文データがBCrypt APIによって暗号化された。\n 暗号化処理を直接呼び出している行を特定せよ。",
+          "3-4: リモートセッション環境での実行かどうかを判定する処理が行われた。\n これに関連するシステムメトリクス参照の行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_2(void) {\n    MessageBeep(MB_ICONWARNING);\n    int r = MessageBoxA(NULL, \"OK\", \"Info\", MB_OK);\n    SetLastError(0);\n    Sleep(1);\n    const char* benign = \"https://example.com/\";\n    const char* C2 = \"http://endpoint.example.org/api\";\n    HINTERNET s = WinHttpOpen(L\"A\", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 0, 0, 0);\n    HINTERNET c = WinHttpConnect(s, L\"example.com\", INTERNET_DEFAULT_HTTPS_PORT, 0);\n    HINTERNET q = WinHttpOpenRequest(c, L\"GET\", L\"/\", 0, 0, 0, WINHTTP_FLAG_SECURE);\n    WinHttpSendRequest(q, 0, 0, 0, 0, 0, 0); WinHttpReceiveResponse(q, 0);\n    Sleep(5);\n    BOOL dbg = IsDebuggerPresent();\n    int rem = GetSystemMetrics(SM_REMOTESESSION);\n    OutputDebugStringA(\"dbg\");\n    Sleep(1);\n    NTSTATUS s1 = 0; BCRYPT_ALG_HANDLE hAlg = (BCRYPT_ALG_HANDLE)1; void* hKey = (void*)1; UCHAR iv[16] = {0}; UCHAR cipher[32] = {0}; ULONG cb = 0;\n    UCHAR plain[16] = {1,2,3}; ULONG plainLen = 3; UCHAR data[8] = {0}; ULONG len = 8; void* hHash = (void*)1;\n    s1 = BCryptEncrypt(hKey, (PUCHAR)plain, (ULONG)plainLen, NULL, iv, sizeof(iv), cipher, (ULONG)sizeof(cipher), &cb, 0);\n    BCryptHashData(hHash, data, (ULONG)len, 0);\n    char out[16]; char in[16] = \"x\"; memcpy(out, in, 1);\n    HANDLE hp = GetCurrentProcess();\n    LPVOID rmem = VirtualAllocEx(hp, 0, 64, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    SIZE_T w = 0; WriteProcessMemory(hp, rmem, \"data\", 5, &w);\n    HANDLE th = CreateThread(0, 0, (LPTHREAD_START_ROUTINE)Sleep, 0, CREATE_SUSPENDED, 0);\n    ResumeThread(th); WaitForSingleObject(th, 100); CloseHandle(th);\n    WinHttpCloseHandle(q); WinHttpCloseHandle(c); WinHttpCloseHandle(s);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "int rem = GetSystemMetrics(SM_REMOTESESSION);"
+    }
+  },
+  {
+    "title": "検体3",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: MessageBoxAは関数名で直接呼ばれているか。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: GetProcAddressの呼び出し回数は2回である。\n YES -> 3-3 (p.6)へ　　NO -> 3-2 (p.5)へ",
+          "2-2: デバッガ検出が使用しているか。\n YES -> 3-1 (p.4)へ　　NO -> 3-4 (p.7)へ",
+          "3-1: 動的に解決された関数ポインタを使って、ユーザー操作なしでGUIダイアログが表示された。\nこの表示処理を行っている行を特定せよ。",
+          "3-2: 生のTCPソケットを用いて、外部IPアドレスへ接続が試みられた。\n この接続処理を行っている行を特定せよ。",
+          "3-3: OpenSSL EVP APIを用いて、AES暗号化処理が初期化された。\n この初期化処理を行っている行を特定せよ。",
+          "3-4: サスペンド状態でリモートスレッドが作成され、その後再開された。\n このスレッド作成処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_3(void) {\n    HMODULE m = GetModuleHandleA(\"user32.dll\");\n    FARPROC p = GetProcAddress(m, \"MessageBoxA\");\n    typedef int (WINAPI *PFN)(HWND,LPCSTR,LPCSTR,UINT);\n    PFN fn = (PFN)p;\n    int r = fn(NULL, \"Hi\", \"Title\", MB_OK);\n    WSADATA w; WSAStartup(MAKEWORD(2,2), &w);\n    SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);\n    const char* C2_IP = \"198.51.100.42\";\n    struct sockaddr_in addr = {0};\n    addr.sin_family = AF_INET; addr.sin_port = htons(443);\n    inet_pton(AF_INET, C2_IP, &addr.sin_addr);\n    connect(s, (struct sockaddr*)&addr, sizeof(addr));\n    Sleep(1);\n    BOOL dbg = FALSE; CheckRemoteDebuggerPresent(GetCurrentProcess(), &dbg);\n    SYSTEMTIME st; GetSystemTime(&st);\n    OutputDebugStringA(\"x\");\n    unsigned char key[16] = {0}; unsigned char iv[16] = {0};\n    unsigned char in[8] = \"abc\"; size_t in_len = 3;\n    unsigned char out[32] = {0}; int outlen = 0; int ok = 0;\n    void* ctx = (void*)1; void* md = (void*)1;\n    ok = EVP_EncryptInit_ex(ctx, EVP_aes_128_cbc(), NULL, key, iv);\n    ok = EVP_EncryptUpdate(ctx, out, &outlen, in, (int)in_len);\n    EVP_DigestUpdate(md, in, in_len);\n    HANDLE hp = GetCurrentProcess();\n    LPVOID rmem = VirtualAllocEx(hp, NULL, 64, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    SIZE_T wbytes = 0; WriteProcessMemory(hp, rmem, \"data\", 5, &wbytes);\n    DWORD tid = 0; HANDLE ht = CreateRemoteThread(hp, NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, &tid);\n    ResumeThread(ht); WaitForSingleObject(ht, 100); CloseHandle(ht);\n    closesocket(s); WSACleanup();\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "connect(s, (struct sockaddr*)&addr, sizeof(addr));"
+    }
+  },
+  {
+    "title": "検体4",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 暗号・ハッシュ・エンコード関連のAPI呼び出し数の合計は2回である。\n YES → 2-2 (p.3)へ　　NO → 2-1 (p.2)へ",
+          "2-1: コードに含まれるSleepの合計待機時間は10ミリ秒以下である。\n YES -> 3-3 (p.6)へ　　NO -> 3-1 (p.4)へ",
+          "2-2: WinHTTPのリクエストはTLSを前提としているか。\n YES -> 3-2 (p.5)へ　　NO -> 3-4 (p.7)へ",
+          "3-1: time.windows.comに対して DNSのAレコード問い合わせが行われた。\nこの問い合わせ処理を行っている行を特定せよ。",
+          "3-2: XOR変換によって \"abcde\"という文字列が変更された。\nこの変換処理を行っている行を特定せよ。",
+          "3-3: 全トップレベルウィンドウに対して、WM_NULLメッセージがブロードキャスト送信された。\nこの操作を行っている行を特定せよ。",
+          "3-4: スレッドの実行コンテキストが明示的に設定された。\nこのコンテキスト設定を行っているAPI呼び出しの行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_4(void) {\n    SendMessageA(HWND_BROADCAST, WM_NULL, 0, 0);\n    int r = MessageBoxW(NULL, L\"Confirm\", L\"App\", MB_OKCANCEL);\n    OutputDebugStringA(\"log\");\n    Sleep(10);\n    const wchar_t* C2 = L\"https://api.example.net/api\";\n    HINTERNET s = WinHttpOpen(L\"A\", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 0, 0, 0);\n    HINTERNET c = WinHttpConnect(s, L\"api.example.net\", INTERNET_DEFAULT_HTTPS_PORT, 0);\n    HINTERNET q = WinHttpOpenRequest(c, L\"GET\", L\"/api\", 0, 0, 0, WINHTTP_FLAG_SECURE);\n    WinHttpSendRequest(q, 0, 0, 0, 0, 0, 0); WinHttpReceiveResponse(q, 0);\n    DnsQuery_A(\"time.windows.com\", DNS_TYPE_A, 0, NULL, NULL, NULL);\n    Sleep(5);\n    BOOL d = IsDebuggerPresent();\n    DWORD tc = GetTickCount();\n    Sleep(1);\n    OutputDebugStringA(\"d\");\n    int n = 5; unsigned char key = 0x5A; unsigned char buf[16] = \"abcde\";\n    for (int i = 0; i < n; i++) buf[i] ^= key;\n    unsigned char hash[20]; SHA1(buf, n, hash);\n    unsigned char out[16]; memcpy(out, buf, n);\n    Base64Encode(buf);\n    HANDLE hp = GetCurrentProcess();\n    CONTEXT ctx; ZeroMemory(&ctx, sizeof(ctx));\n    SetThreadContext(GetCurrentThread(), &ctx);\n    ResumeThread(GetCurrentThread());\n    SIZE_T w = 0; WriteProcessMemory(hp, out, \"X\", 2, &w);\n    WinHttpCloseHandle(q); WinHttpCloseHandle(c); WinHttpCloseHandle(s);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "DnsQuery_A(\"time.windows.com\", DNS_TYPE_A, 0, NULL, NULL, NULL);"
+    }
+  },
+  {
+    "title": "検体5",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: ネットワークで使用されているURLは標準のHTTPSポートを指定しているか。\n YES → 2-2 (p.3)へ　　NO → 2-1 (p.2)へ",
+          "2-1: 確保されたメモリのページ属性に実行可能権限は含まれるか。\n YES -> 3-3 (p.6)へ　　NO -> 3-2 (p.5)へ",
+          "2-2: 指定されているポート番号は8443番か。\n YES -> 3-1 (p.4)へ　　NO -> 3-4 (p.7)へ",
+          "3-1: AES暗号処理の準備として、アルゴリズムプロバイダが開かれた。\n この初期化処理を行っている行を特定せよ。",
+          "3-2: WinINet APIを使用して、HTTPS URLが直接オープンされた。\n この通信処理を行っている行を特定せよ。",
+          "3-3: サスペンド状態で作成されたスレッドが再開され、一定時間後に終了した。\n この再開処理を行っている行を特定せよ。",
+          "3-4: 現在のプロセスにデバッガが接続されているかどうか判定されていることが判明した。\n この検出処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_5(void) {\n    MessageBeep(MB_ICONINFORMATION);\n    MessageBoxA(NULL, \"Update available\", \"Notice\", MB_OK);\n    OutputDebugStringA(\"i\");\n    Sleep(1);\n    const char* C2 = \"https://host.example.com:8443/api\";\n    HINTERNET hInet = InternetOpenA(\"A\", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);\n    HINTERNET hUrl = InternetOpenUrlA(hInet, C2, NULL, 0, INTERNET_FLAG_SECURE, 0);\n    const char* ok = \"https://www.microsoft.com/\";\n    Sleep(2);\n    BOOL dbg = FALSE; CheckRemoteDebuggerPresent(GetCurrentProcess(), &dbg);\n    SYSTEMTIME st; GetSystemTime(&st);\n    Sleep(1);\n    OutputDebugStringA(\"x\");\n    BCRYPT_ALG_HANDLE hAlg = NULL; NTSTATUS s = 0; ULONG cb = 0;\n    void* hKey = (void*)1; UCHAR iv[16] = {0}; UCHAR out[32] = {0};\n    const UCHAR in[8] = \"abc\"; ULONG inLen = 3; UCHAR data[8] = {0}; ULONG len = 8; void* hHash = (void*)1;\n    s = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, NULL, 0);\n    s = BCryptEncrypt(hKey, (PUCHAR)in, (ULONG)inLen, NULL, iv, sizeof(iv), out, (ULONG)sizeof(out), &cb, 0);\n    BCryptHashData(hHash, data, (ULONG)len, 0);\n    memcpy(out, in, inLen);\n    HANDLE hp = GetCurrentProcess();\n    SIZE_T size = 64; LPVOID rmem = VirtualAllocEx(hp, NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    SIZE_T w = 0; WriteProcessMemory(hp, rmem, \"data\", 5, &w);\n    HANDLE th = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, NULL);\n    ResumeThread(th); WaitForSingleObject(th, 100); CloseHandle(th);\n    if (hUrl) InternetCloseHandle(hUrl); if (hInet) InternetCloseHandle(hInet);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "s = BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, NULL, 0);"
+    }
+  },
+  {
+    "title": "検体6",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: Sleep呼び出しの合計待機時間は10秒以上である。\n YES → 2-2 (p.3)へ　　NO → 2-1 (p.2)へ",
+          "2-1: Base64操作はエンコードではなくデコードか。\n YES -> 3-1 (p.4)へ　　NO -> 3-2 (p.5)へ",
+          "2-2: このコードはデバッガ検出に関連するAPI呼び出しを含むか。 \n YES -> 3-3 (p.6)へ　　NO -> 3-4 (p.7)へ",
+          "3-1: Base64文字列\"YWJj\" がデコードされ、バイナリデータに変換された。\n このデコード処理を行っている行を特定せよ。",
+          "3-2: SHA256によって\"abcde\"のハッシュ値が計算された。\n このハッシュ処理を行っている行を特定せよ。",
+          "3-3: HTTPS通信を前提に /statusパスへ HTTPリクエストが開かれた。\n このリクエスト初期化を行っている行を特定せよ。",
+          "3-4: 全トップレベルウィンドウに対して、WM_NULLメッセージがブロードキャスト送信された。\n この操作を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_6(void) {\n    SendMessageA(HWND_BROADCAST, WM_NULL, 0, 0);\n    MessageBoxW(NULL, L\"Done\", L\"Task\", MB_OK);\n    OutputDebugStringA(\"d\");\n    Sleep(10);\n    const wchar_t* C2 = L\"https://control.example.net/status\";\n    HINTERNET s = WinHttpOpen(L\"A\", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 0, 0, 0);\n    HINTERNET c = WinHttpConnect(s, L\"control.example.net\", INTERNET_DEFAULT_HTTPS_PORT, 0);\n    HINTERNET q = WinHttpOpenRequest(c, L\"GET\", L\"/status\", 0, 0, 0, WINHTTP_FLAG_SECURE);\n    WinHttpSendRequest(q, 0, 0, 0, 0, 0, 0); WinHttpReceiveResponse(q, 0);\n    DnsQuery_A(\"example.org\", DNS_TYPE_A, 0, NULL, NULL, NULL);\n    Sleep(2);\n    BOOL dbg = IsDebuggerPresent();\n    DWORD ticks = GetTickCount();\n    Sleep(1);\n    OutputDebugStringA(\"y\");\n    size_t len = 5; unsigned char key = 0x5A; unsigned char in[8] = \"abcde\"; unsigned char out[8] = {0};\n    for (size_t i = 0; i < len; i++) out[i] = in[i] ^ key;\n    unsigned char hash[32]; SHA256(in, len, hash);\n    memcpy(out, in, len);\n    unsigned char bin[16]; const char* b64 = \"YWJj\";\n    Base64Decode(b64, bin);\n    CONTEXT ctx; ZeroMemory(&ctx, sizeof(ctx));\n    HANDLE th = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, NULL);\n    SuspendThread(th);\n    ResumeThread(th);\n    SetThreadContext(th, &ctx);\n    CloseHandle(th);\n    WinHttpCloseHandle(q); WinHttpCloseHandle(c); WinHttpCloseHandle(s);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "HINTERNET q = WinHttpOpenRequest(c, L\"GET\", L\"/status\", 0, 0, 0, WINHTTP_FLAG_SECURE);"
+    }
+  },
+  {
+    "title": "検体7",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: EVP_* 系のAPI呼び出しは合計3回以上である。\n YES → 2-2 (p.3)へ　　NO → 2-1 (p.2)へ",
+          "2-1: ページ属性の変更で実行可能権限が付与されているか。\n YES -> 3-2 (p.5)へ　　NO -> 3-4 (p.7)へ",
+          "2-2: デバッグ出力のワイド文字版APIが使用されているか。 \n YES -> 3-3 (p.6)へ　　NO -> 3-1 (p.4)へ",
+          "3-1: ワイド文字列\"note\"がデバッガへログ出力された。\n このログ出力を行っている行を特定せよ。",
+          "3-2: Base64文字列\"YWJj\"がOpenSSL EVP APIによってデコードされた。\n この処理を行っている行を特定せよ。",
+          "3-3: WinINet APIを使用して、HTTPS URLが直接オープンされた。\n この通信処理を行っている行を特定せよ。",
+          "3-4: AES-256-CBC暗号化の初期化処理がOpenSSL EVP APIによって行われた。\n この初期化を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_7(void) {\n    OutputDebugStringW(L\"note\");\n    MessageBoxW(NULL, L\"Please click OK\", L\"App\", MB_OK);\n    MessageBeep(MB_OK);\n    Sleep(1);\n    const char* ok = \"https://www.microsoft.com/\";\n    const char* C2 = \"https://x.example.net/b\";\n    HINTERNET hInet = InternetOpenA(\"A\", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);\n    HINTERNET hUrl = InternetOpenUrlA(hInet, ok, NULL, 0, INTERNET_FLAG_SECURE, 0);\n    Sleep(2);\n    BOOL dbg = FALSE; CheckRemoteDebuggerPresent(GetCurrentProcess(), &dbg);\n    SYSTEMTIME st; GetSystemTime(&st);\n    Sleep(1);\n    OutputDebugStringA(\"z\");\n    unsigned char key[32] = {0};\n    unsigned char iv[16] = {0};\n    unsigned char in[8] = \"abc\"; size_t in_len = 3;\n    unsigned char out[32] = {0}; int outlen = 0; int okv = 0;\n    void* ctx = (void*)1;\n    okv = EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);\n    okv = EVP_EncryptUpdate(ctx, out, &outlen, in, (int)in_len);\n    const char* b64 = \"YWJj\"; unsigned char bin[16] = {0};\n    EVP_DecodeBlock(bin, (const unsigned char*)b64, (int)strlen(b64));\n    HANDLE hp = GetCurrentProcess();\n    SIZE_T size = 64;\n    LPVOID rmem = VirtualAllocEx(hp, NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    DWORD old = 0; VirtualProtectEx(hp, rmem, size, PAGE_READWRITE, &old);\n    SIZE_T w = 0; WriteProcessMemory(hp, rmem, \"data\", 5, &w);\n    HANDLE th = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, NULL);\n    ResumeThread(th); WaitForSingleObject(th, 100); CloseHandle(th);\n    if (hUrl) InternetCloseHandle(hUrl); if (hInet) InternetCloseHandle(hInet);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "HINTERNET hUrl = InternetOpenUrlA(hInet, ok, NULL, 0, INTERNET_FLAG_SECURE, 0);"
+    }
+  },
+  {
+    "title": "検体8",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: このコードはデバッガ検出に関連するAPI呼び出しを含む。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: HTTPリクエストはTLSを前提としているか。\n YES -> 3-4 (p.7)へ　　NO -> 3-1 (p.4)へ",
+          "2-2: 使用されているXORキーの10進数表現は \n 150 -> 3-3 (p.6)へ　　170 -> 3-2 (p.5)へ",
+          "3-1: XORキーを用いて\"abcde\"のバッファが変換された。\n この XOR 処理を行っている行を特定せよ。",
+          "3-2: HTTPS通信を前提に/apiパスへHTTPリクエストが開かれた。\n このリクエスト初期化を行っている行を特定せよ。",
+          "3-3: SHA1によって \"abcde\"のハッシュ値が計算された。\n このハッシュ処理を行っている行を特定せよ。",
+          "3-4: エラー状態がリセットされ、直後の処理に影響を与える可能性がある。\n このリセット操作を行っているAPI呼び出しの行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_8(void) {\n    MessageBoxA(NULL, \"OK\", \"App\", MB_OK);\n    OutputDebugStringA(\"o\");\n    Sleep(1);\n    SetLastError(0);\n    const wchar_t* C2 = L\"https://host.example.net/api/api\";\n    const wchar_t* ok = L\"https://bing.com\";\n    HINTERNET s = WinHttpOpen(L\"A\", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 0, 0, 0);\n    HINTERNET c = WinHttpConnect(s, L\"host.example.net\", INTERNET_DEFAULT_HTTPS_PORT, 0);\n    HINTERNET q = WinHttpOpenRequest(c, L\"GET\", L\"/api/api\", 0, 0, 0, WINHTTP_FLAG_SECURE);\n    WinHttpSendRequest(q, 0, 0, 0, 0, 0, 0); WinHttpReceiveResponse(q, 0);\n    Sleep(2);\n    BOOL d = IsDebuggerPresent();\n    DWORD pid = GetCurrentProcessId();\n    Sleep(1);\n    OutputDebugStringA(\"t\");\n    int n = 5; unsigned char buf[8] = \"abcde\"; unsigned char out[8] = {0};\n    for (int i = 0; i < n; i++) { out[i] = buf[i] ^ 0xAA; }\n    unsigned char hash[20]; SHA1(buf, n, hash);\n    memcpy(out, buf, n);\n    Base64Encode(buf);\n    CONTEXT ctx; ZeroMemory(&ctx, sizeof(ctx));\n    HANDLE th = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, NULL);\n    ResumeThread(th);\n    SetThreadContext(th, &ctx);\n    SuspendThread(th);\n    CloseHandle(th);\n    WinHttpCloseHandle(q); WinHttpCloseHandle(c); WinHttpCloseHandle(s);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "SetLastError(0);"
+    }
+  },
+  {
+    "title": "検体9",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: CreateRemoteThreadは使用されている。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: Sleep呼び出しの合計待機時間は \n 3ミリ秒 -> 3-4 (p.7)へ　　4ミリ秒 -> 3-2 (p.5)へ",
+          "2-2: 確保されたメモリに実行可能属性を含まれまない。 \n YES -> 3-1 (p.4)へ　　NO -> 3-3 (p.6)へ",
+          "3-1:OpenSSL EVP APIによって\"abc\"のハッシュ値が計算された。\n このハッシュ処理を行っている行を特定せよ。",
+          "3-2: HTTP通信を前提にURLが直接オープンされた。\n この処理を行っているAPI呼び出しの行を特定せよ。",
+          "3-3: 現在のプロセスにデバッガが接続されているかどうかが判定された。\n この検出処理を行っているAPI呼び出しの行を特定せよ。",
+          "3-4: OpenSSL EVP APIによって\"abc\"のBase64エンコードが行われた。\n この処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_9(void) {\n    int r = MessageBoxW(NULL, L\"Notice\", L\"App\", MB_OK);\n    MessageBeep(MB_ICONINFORMATION);\n    OutputDebugStringA(\"n\");\n    Sleep(1);\n    const char* C2 = \"http://node.example.com/api\";\n    const char* ok = \"http://example.org/\";\n    HINTERNET hInet = InternetOpenA(\"A\", INTERNET_OPEN_TYPE_PRECONFIG, NULL, NULL, 0);\n    HINTERNET hUrl = InternetOpenUrlA(hInet, ok, NULL, 0, 0, 0);\n    Sleep(2);\n    BOOL dbg = FALSE;\n    CheckRemoteDebuggerPresent(GetCurrentProcess(), &dbg);\n    SYSTEMTIME st;\n    GetSystemTime(&st);\n    Sleep(1);\n    OutputDebugStringA(\"g\");\n    unsigned char in[8] = \"abc\";\n    size_t in_len = 3;\n    unsigned char out[32] = {0};\n    int outlen = 0;\n    unsigned char b64[64] = {0};\n    void* ctx = (void*)1;\n    void* md = (void*)1;\n    int okv = EVP_EncryptUpdate(ctx, out, &outlen, in, (int)in_len);\n    EVP_DigestUpdate(md, in, in_len);\n    EVP_EncodeBlock(b64, in, (int)in_len);\n    memcpy(out, in, in_len);\n    HANDLE hp = GetCurrentProcess();\n    SIZE_T size = 64;\n    LPVOID rmem = VirtualAllocEx(hp, NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    SIZE_T w = 0;\n    WriteProcessMemory(hp, rmem, \"data\", 5, &w);\n    HANDLE th = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, NULL);\n    ResumeThread(th);\n    WaitForSingleObject(th, 100);\n    CloseHandle(th);\n    if (hUrl) InternetCloseHandle(hUrl);\n    if (hInet) InternetCloseHandle(hInet);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "EVP_DigestUpdate(md, in, in_len);"
+    }
+  },
+  {
+    "title": "検体10",
+    "level": "Easy",
+    "timeLimitSec": 210,
+    "baseScore": 350,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 実行可能権限を含むメモリ確保が行われている。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: Sleep呼び出しの合計待機時間は \n 3ミリ秒 -> 3-4 (p.7)へ　　4ミリ秒 -> 3-3 (p.6)へ",
+          "2-2:SM_CLEANBOOTのシステムメトリクスは参照されている。 \n YES -> 3-2 (p.5)へ　　NO -> 3-1 (p.4)へ",
+          "3-1: BCrypt APIによって\"abc\"の暗号化処理が行われた。\n この暗号化処理を行っている行を特定せよ。",
+          "3-2: システムの起動状態が判定された。\n この処理を行っているAPI呼び出しの行を特定せよ。",
+          "3-3: Base64文字列\"YWJj\"がバイナリデータにデコードされた。\n この処理を行っているAPI呼び出しの行を特定せよ。",
+          "3-4: HTTPS通信を前提に/apiパスへHTTPリクエストが開かれた。\n このリクエスト初期化を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_10(void) {\n    MessageBoxA(NULL, \"Warning\", \"System\", MB_OKCANCEL);\n    OutputDebugStringA(\"w\");\n    MessageBeep(MB_OK);\n    Sleep(1);\n    const wchar_t* C2 = L\"https://gateway.example.net/api\";\n    const wchar_t* ok = L\"https://contoso.com/\";\n    HINTERNET s = WinHttpOpen(L\"A\", WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, 0, 0, 0);\n    HINTERNET c = WinHttpConnect(s, L\"gateway.example.net\", INTERNET_DEFAULT_HTTPS_PORT, 0);\n    HINTERNET q = WinHttpOpenRequest(c, L\"GET\", L\"/api\", 0, 0, 0, WINHTTP_FLAG_SECURE);\n    WinHttpSendRequest(q, 0, 0, 0, 0, 0, 0); WinHttpReceiveResponse(q, 0);\n    Sleep(2);\n    BOOL dbg = IsDebuggerPresent();\n    int clean = GetSystemMetrics(SM_CLEANBOOT);\n    Sleep(1);\n    OutputDebugStringA(\"u\");\n    BCRYPT_ALG_HANDLE hAlg = (BCRYPT_ALG_HANDLE)1; BCRYPT_HASH_HANDLE hHash = (BCRYPT_HASH_HANDLE)1; NTSTATUS s1 = 0; ULONG cb = 0;\n    void* hKey = (void*)1; UCHAR iv[16] = {0}; UCHAR cipher[64] = {0}; UCHAR plain[8] = \"abc\"; ULONG plainLen = 3;\n    s1 = BCryptEncrypt(hKey, (PUCHAR)plain, (ULONG)plainLen, NULL, iv, sizeof(iv), cipher, (ULONG)sizeof(cipher), &cb, 0);\n    s1 = BCryptCreateHash(hAlg, &hHash, NULL, 0, NULL, 0, 0);\n    const char* b64 = \"YWJj\"; DWORD binLen = 16; BYTE bin[16] = {0};\n    CryptStringToBinaryA(b64, 0, CRYPT_STRING_BASE64, bin, &binLen, NULL, NULL);\n    BYTE out[16] = {0}; BYTE in[8] = \"ab\"; SIZE_T inLen = 2; memcpy(out, in, inLen);\n    HANDLE hp = GetCurrentProcess(); SIZE_T n = 64; SIZE_T w = 0;\n    LPVOID rmem = VirtualAllocEx(hp, NULL, n, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    WriteProcessMemory(hp, rmem, \"data\", 5, &w);\n    HANDLE th = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, NULL);\n    ResumeThread(th); WaitForSingleObject(th, 100); CloseHandle(th);\n    WinHttpCloseHandle(q); WinHttpCloseHandle(c); WinHttpCloseHandle(s);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "ResumeThread(pi.hThread);"
+    }
+  },
+  {
+    "title": "検体11",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: GUI表示を外部依存なく実行するために API を動的に解決しており、GetProcAddressで動的に解決されている。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: TCP接続で指定されているポート番号は8443番である。\n YES -> 3-2 (p.5)へ　　NO -> 3-4 (p.7)へ",
+          "2-2: タイミング調整やアンチ解析の目的で待機処理が挿入されたSleep呼び出しの合計待機時間は \n 1ミリ秒 -> 3-1 (p.4)へ　　2ミリ秒 -> 3-3 (p.6)へ",
+          "3-1: 外部アドレスへの通信を確立するために、生の TCP ソケットで外部アドレスへの接続が試行されていた。\n 該当箇所を抽出せよ。",
+          "3-2: 既知の仮想環境OUIを検知してフラグを立てる判定が含まれていた。\n 該当箇所を抽出せよ。",
+          "3-3: プロセス作成後、スレッドコンテキストが変更されてから再開されていた。\n 該当箇所を抽出せよ。",
+          "3-4: GUI ダイアログを表示するために、動的に解決した関数ポインタ経由でGUIダイアログが直接表示されていた。\n 該当箇所を抽出せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_11(void) {\n    HMODULE u = LoadLibraryA(\"user32.dll\");\n    FARPROC p = GetProcAddress(u, \"MessageBoxW\");\n    typedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n    PFN fn = (PFN)p;\n    int r = fn(NULL, L\"Hello\", L\"Notice\", MB_OK | MB_ICONWARNING);\n    WSADATA w; WSAStartup(MAKEWORD(2,2), &w);\n    SOCKET s = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);\n    const char* C2_IP = \"203.0.113.77\";\n    struct sockaddr_in a = {0};\n    a.sin_family = AF_INET; a.sin_port = htons(8443);\n    inet_pton(AF_INET, C2_IP, &a.sin_addr);\n    connect(s, (struct sockaddr*)&a, sizeof(a));\n    char macStr[32] = \"08-00-27-AA-BB-CC\";\n    BOOL isVM = FALSE;\n    if (strstr(macStr, \"08-00-27\") || strstr(macStr, \"00-05-69\")) isVM = TRUE;\n    SYSTEMTIME st; GetSystemTime(&st);\n    Sleep(1);\n    BCRYPT_ALG_HANDLE hAlg = NULL; BCryptOpenAlgorithmProvider(&hAlg, BCRYPT_AES_ALGORITHM, NULL, 0);\n    BCRYPT_KEY_HANDLE hKey = (BCRYPT_KEY_HANDLE)1;\n    UCHAR iv[16] = {0}; UCHAR in[8] = \"abc\"; ULONG inLen = 3; UCHAR out[32] = {0}; ULONG outLen = 32; ULONG cb = 0;\n    NTSTATUS s1 = BCryptEncrypt(hKey, (PUCHAR)in, (ULONG)inLen, NULL, iv, sizeof(iv), out, (ULONG)outLen, &cb, 0);\n    STARTUPINFOW si; ZeroMemory(&si, sizeof(si)); si.cb = sizeof(si);\n    PROCESS_INFORMATION pi; ZeroMemory(&pi, sizeof(pi));\n    CreateProcessW(L\"C:\\\\Windows\\\\System32\\\\Apphost.exe\", NULL, NULL, NULL, FALSE, CREATE_SUSPENDED, NULL, NULL, &si, &pi);\n    CONTEXT ctx; ZeroMemory(&ctx, sizeof(ctx)); ctx.ContextFlags = CONTEXT_CONTROL;\n    SetThreadContext(pi.hThread, &ctx);\n    ResumeThread(pi.hThread);\n    WaitForSingleObject(pi.hProcess, 100);\n    CloseHandle(pi.hThread);\n    CloseHandle(pi.hProcess);\n    closesocket(s);\n    WSACleanup();\n    FreeLibrary(u);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "if (strstr(macStr, \"08-00-27\") || strstr(macStr, \"00-05-69\")) isVM = TRUE;"
+    }
+  },
+  {
+    "title": "検体12",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: TLS 通信を確保するために、WinINetで、TLSフラグが指定されている。 \n YES → 2-2 (p.3)へ　　NO → 2-1 (p.2)へ",
+          "2-1: GUI表示を外部依存なく実行するために、GUI表示APIはGetProcAddressで動的に解決されている。 \n YES → 3-3 (p.6)へ　　NO → 3-1 (p.4)へ",
+          "2-2: 実行フロー制御やアンチ解析のために挿入されたSleep呼び出しの合計待機時間は \n 10ミリ秒 → 3-2 (p.5)へ　　9ミリ秒 → 3-4 (p.7)へ",
+          "3-1: EVP_EncryptInit_exによりAES-256-CBC暗号が初期化された。\n 該当箇所を抽出せよ。",
+          "3-2: コード注入のために他プロセスに対するリモートメモリ確保と書き込みが行われた。\n リモートメモリ書き込みを行っている該当行を抽出せよ。",
+          "3-3: 同期確認のためにスレッドをサスペンドで作成し、実行したログが見つかった。\n 実行を行っている該当行を抽出せよ。",
+          "3-4: TLS通信を行うためにWinINetを使用し、TLSのURLが直接オープンされた。\n 該当箇所を抽出せよ。"
+        ]
+      },
+      "B": {
+        "view": "void specimen_12(void) {\n    HMODULE u = GetModuleHandleW(L\"user32.dll\");\n    FARPROC p = GetProcAddress(u, \"MessageBoxW\");\n    typedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n    int r = ((PFN)p)(NULL, L\"Hi\", L\"Title\", MB_OK);\n    OutputDebugStringA(\"shown\");\n    HINTERNET h = InternetOpenA(\"ua\", INTERNET_OPEN_TYPE_DIRECT, NULL, NULL, 0);\n    const char* C2 = \"https://cnc.example.net/api\";\n    HINTERNET uUrl = InternetOpenUrlA(h, C2, NULL, 0, INTERNET_FLAG_SECURE, 0);\n    Sleep(10);\n    WCHAR desc[256] = L\"VirtualBox\";\n    BOOL isVM = FALSE;\n    if (wcsstr(desc, L\"VirtualBox\") || wcsstr(desc, L\"VMware\")) isVM = TRUE;\n    OutputDebugStringA(\"probe\");\n    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();\n    unsigned char key[32] = {0};\n    unsigned char iv[16] = {0};\n    unsigned char in[8] = \"abc\"; size_t in_len = 3;\n    unsigned char out[32] = {0}; int outlen = 0;\n    EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, key, iv);\n    int ok = EVP_EncryptUpdate(ctx, out, &outlen, in, (int)in_len);\n    HANDLE hp = GetCurrentProcess();\n    SIZE_T payloadSize = 64; SIZE_T w = 0;\n    LPVOID rmem = VirtualAllocEx(hp, NULL, payloadSize, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);\n    WriteProcessMemory(hp, rmem, \"data\", 5, &w);\n    HANDLE ht = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)Sleep, NULL, CREATE_SUSPENDED, NULL);\n    ResumeThread(ht);\n    WaitForSingleObject(ht, 100);\n    CloseHandle(ht);\n    if (uUrl) InternetCloseHandle(uUrl);\n    if (h) InternetCloseHandle(h);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "WriteProcessMemory(hp, rmem, \"data\", 5, &w);"
+    }
+  },
+  {
+    "title": "検体13",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 軽量な難読化処理として実行されたBase64はエンコード方向である \n YES → 2-2 (p.3)へ　　NO → 2-1 (p.2)へ",
+          "2-1: インジェクションやジョブ制御のためにサスペンド状態のスレッドをResumeThreadで再開している \n YES → 3-2 (p.5)へ　　NO → 3-4 (p.7)へ",
+          "2-2: BCrypt系の呼び出し回数は \n 6回 → 3-1 (p.4)へ　　5回 → 3-3 (p.6)へ",
+          "3-1: XOR 後のバイト列を Base64 エンコードしている処理があった。\n 計算処理を行っている該当行を抽出せよ。",
+          "3-2: サスペンドで作成したスレッドを再開して短時間待機している処理が含まれていた。\n 待機を行っている該当行を抽出せよ。",
+          "3-3: WinHTTPを用いてHTTPSのGETリクエストと応答受信が行われていた。\n リクエストを受信している該当行を抽出せよ。",
+          "3-4: BCryptによる難読化が行われている。\n ハッシュ以外の難読化を行っている該当行を抽出せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_13(void){\nSleep(1);\nHMODULE u=LoadLibraryW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Confirm\",L\"App\",MB_OK);\nHINTERNET h=WinHttpOpen(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"www.microsoft.com\";\nHINTERNET c=WinHttpConnect(h,host,443,0);\nHINTERNET r=WinHttpOpenRequest(c,L\"GET\",L\"/api\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\nWinHttpSendRequest(r,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\nWinHttpReceiveResponse(r,NULL);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint sm=GetSystemMetrics(SM_REMOTESESSION);\nconst WCHAR* mac=L\"00:05:69:00:00:00\";\nBOOL oui=(wcsstr(mac,L\"00:05:69\")!=NULL);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nBYTE buf[8]={1,2,3,4,5,6,7,8};\nfor(size_t i=0;i<8;i++) buf[i]^=0x5A;\nCHAR b64[64]={0};DWORD b64Len=64;\nCryptBinaryToStringA(buf,8,CRYPT_STRING_BASE64,b64,&b64Len);\nBCRYPT_ALG_HANDLE hAlg=NULL;BCRYPT_HASH_HANDLE hHash=NULL;\nDWORD objLen=0,cb=0;UCHAR obj[256];UCHAR hash[32];\nBCryptOpenAlgorithmProvider(&hAlg,BCRYPT_SHA256_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb,0);\nBCryptCreateHash(hAlg,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)b64,(ULONG)strlen(b64),0);\nBCryptFinishHash(hHash,hash,sizeof(hash),0);\nHANDLE hp=GetCurrentProcess();\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nSIZE_T wr=0;const char* s=\"OK\";\nWriteProcessMemory(hp,mem,s,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(3);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "WinHttpReceiveResponse(r,NULL);"
+    }
+  },
+  {
+    "title": "検体14",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 通信データの難読化にはXOR処理が使われており、使用されたキーの10進数表現は\n 32 → 2-2 (p.4)へ　　31 → 2-1 (p.3)へ",
+          "2-1: スレッド制御のためにCREATE_SUSPENDEDフラグ付きのCreateThread呼び出しが行われていた。\n YES → 3-2 (p.6)へ　　NO → 3-4 (p.8)へ",
+          "2-2: ユーザー通知や環境確認のためにMessageBeep(MB_ICONINFORMATION)が呼び出されていた。\n YES → 3-3 (p.7)へ　　NO → 3-1 (p.5)へ",
+          "3-1: HTTPS 通信を行うために、WinHTTPを用いて8443ポートへのGETリクエストが実行されていた。\n実際に通信を行っている行を特定せよ。",
+          "3-2: ステータス取得のために/statusパスへの HTTPリクエストが送信された。\n このリクエストを行っている行を特定せよ。",
+          "3-3: データの難読化処理として、バイト列に対してXORによる単純変換が行われていた。\n この処理を行っている行を特定せよ。",
+          "3-4: プロセス内でデータを操作するために、書き込み可能なメモリ領域を確保しWriteProcessMemoryが使用されていた。\n このスレッド初期化処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_14(void){\nSleep(1);\nMessageBeep(MB_ICONINFORMATION);\nHMODULE u=LoadLibraryW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Update\",L\"App\",MB_OK);\nHINTERNET h=WinHttpOpen(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"example.net\";\nHINTERNET c=WinHttpConnect(h,host,8443,0);\nHINTERNET r=WinHttpOpenRequest(c,L\"GET\",L\"/status\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\nWinHttpSendRequest(r,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\nWinHttpReceiveResponse(r,NULL);\nSleep(3);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint remot=GetSystemMetrics(SM_REMOTESESSION);\nconst WCHAR* mac=L\"08:00:27:AA:BB:CC\";\nBOOL oui=(wcsstr(mac,L\"08:00:27\")!=NULL)||(wcsstr(mac,L\"00:05:69\")!=NULL);\nconst WCHAR* dev=L\"VMware Virtual Platform\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nBYTE src[8]={1,2,3,4,5,6,7,8};\nBYTE dst[8];\nfor(size_t i=0;i<8;i++) dst[i]=src[i]^0x1F;\nCHAR b64in[]=\"T0s=\";\nunsigned char bin[16];\nint bl=EVP_DecodeBlock(bin,(const unsigned char*)b64in,(int)strlen(b64in));\nEVP_MD_CTX* ctx=EVP_MD_CTX_new();\nunsigned char digest[32];\nEVP_DigestInit_ex(ctx,EVP_sha256(),NULL);\nEVP_DigestUpdate(ctx,bin,bl>0?bl:0);\nEVP_DigestFinal_ex(ctx,digest,NULL);\nEVP_MD_CTX_free(ctx);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s=\"OK\";\nWriteProcessMemory(hp,mem,s,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      },
+      "answer": {
+        "type": "exact",
+        "value": "r=WinHttpOpenRequest(c,L\"GET\",L\"/status\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);"
+      }
+    }
+  },
+  {
+    "title": "検体15",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: データの難読化処理としてXOR変換が行われており、使用された鍵の10進数表現は\n 51 → 2-1 (p.2)へ　　50 → 2-2 (p.3)へ",
+          "2-1: データの整合性検証のためにハッシュアルゴリズムが使用されており、SHA-256による処理が確認された。\n YES → 3-3 (p.7)へ　　NO → 3-1 (p.5)へ",
+          "2-2: リモートセッション環境の検知目的でGetSystemMetrics(SM_REMOTESESSION) が呼び出されていた。\n YES → 3-4 (p.8)へ　　NO → 3-2 (p.6)へ",
+          "3-1:プロセス内でデータを操作するために、書き込み可能なメモリ領域を確保し WriteProcessMemoryが使用されていた。\n メモリ確保の処理を行っている行を特定せよ。",
+          "3-2: HTTPS 通信を行うために、WinHTTPを用いたGETリクエストと応答受信が実行されていた。\n この処理を行っている行を特定せよ。",
+          "3-3: データの難読化処理として、XOR 変換後にBase64エンコードが行われていた。\n 計算処理を行っている行を特定せよ。",
+          "3-4: ハッシュ処理の準備として、BCryptでオブジェクトサイズを取得後、CreateHashとHashDataが実行されていた。\n サイズ取得を処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "WriteProcessMemory(hp,mem,s,2,&wr);"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "int r = fn(NULL, L\"Hello\", L\"Notice\", MB_OK | MB_ICONWARNING);"
+    }
+  },
+  {
+    "title": "検体16",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1:低レベルな通信制御のためWinsock（socket）APIが使用されており、その呼び出しが確認された \n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: 通信の秘匿性を高める TLS(SECURE)フラグは使用されておらず、非暗号化接続が確認された。\n YES → 3-4 (p.8)へ　　NO → 3-2 (p.6)へ",
+          "2-2: 宛先IPがTEST-NET-3(203.0.113.0/24)に含まれていることが確認された。\n YES → 3-3 (p.7)へ　　NO → 3-1 (p.5)へ",
+          "3-1: TCPソケットを生成し、203.0.113.77:8443に接続する処理が行われていた。\n この接続処理を行っている行を特定せよ。",
+          "3-2: データの暗号化処理として、OpenSSLのEVP APIを用いたAES 暗号化が実行されていた。\nこのことがわかる呼び出しを行っている行を特定せよ。",
+          "3-3: 暗号化されたデータの整合性検証のために、SHA-1ダイジェストの計算が行われていた。\n この計算処理を行っている行を特定せよ。",
+          "3-4: 行状態の可視化やデバッグ目的で、出力用のデバッグ文字列が投げられていた。\n この処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_16(void){\nSleep(1);\nHMODULE u=GetModuleHandleW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Hi\",L\"Title\",MB_OK);\nOutputDebugStringA(\"shown\");\nSOCKET s=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);\nstruct sockaddr_in a; memset(&a,0,sizeof(a));\na.sin_family=AF_INET; a.sin_port=htons(8443);\ninet_pton(AF_INET,\"203.0.113.77\",&a.sin_addr);\nconnect(s,(struct sockaddr*)&a,sizeof(a));\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE; CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nconst WCHAR* mac=L\"00:05:69:00:00:00\";\nBOOL oui=(wcsstr(mac,L\"00:05:69\")!=NULL)||(wcsstr(mac,L\"08:00:27\")!=NULL);\nBYTE src[8]={1,2,3,4,5,6,7,8};\nBYTE dst[8];\nfor(size_t i=0;i<8;i++) dst[i]=src[i]^0x6B;\nCHAR b64[64]={0}; DWORD b64Len=64;\nCryptBinaryToStringA(dst,8,CRYPT_STRING_BASE64,b64,&b64Len);\nEVP_CIPHER_CTX* cctx=EVP_CIPHER_CTX_new();\nEVP_EncryptInit_ex(cctx,EVP_aes_256_cbc(),NULL,(const unsigned char)\"K\",(const unsigned char)\"I\");\nint outlen=0; unsigned char out[32];\nEVP_EncryptUpdate(cctx,out,&outlen,(const unsigned char*)b64,(int)strlen(b64));\nEVP_MD_CTX* mctx=EVP_MD_CTX_new(); unsigned char digest[20];\nEVP_DigestInit_ex(mctx,EVP_sha1(),NULL);\nEVP_DigestUpdate(mctx,out,outlen);\nEVP_DigestFinal_ex(mctx,digest,NULL);\nEVP_MD_CTX_free(mctx); EVP_CIPHER_CTX_free(cctx);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0; const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "connect(s,(struct sockaddr*)&a,sizeof(a));"
+    }
+  },
+  {
+    "title": "検体17",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 通信の秘匿性を確保するために、INTERNET_FLAG_SECURE によるTLS指定が行われていた。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: 受信データの復元処理として、Base64文字列をバイナリにデコードする処理が行われていた。\n YES → 3-3 (p.7)へ　　NO → 3-1 (p.5)へ",
+          "2-2: 環境検知の目的で、MAC アドレスのOUI（08-00-27 / 00-05-69）による判定処理が含まれていた。\n YES → 3-4 (p.8)へ　　NO → 3-2 (p.6)へ",
+          "3-1: デコードされたバイナリデータに対して、BCRYPTによるハッシュ化処理が行われていた。\n この処理を行っている行を特定せよ。",
+          "3-2: 受信データの復元処理として、Base64文字列をバイナリにデコードする処理が行われていた。\n この処理を行っている行を特定せよ。",
+          "3-3: 環境検知や非同期通信の目的で、ブロードキャストによるWM_NULLメッセージ送信が行われていた。\n この処理を行っている行を特定せよ。",
+          "3-4: WinINetを使ってTLSフラグ付き URLが開かれていた。\n この判定処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_17(void){\nSleep(1);\nSendMessageA(HWND_BROADCAST,WM_NULL,0,0);\nHMODULE u=GetModuleHandleA(\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxA\");\ntypedef int (WINAPI *PFN)(HWND,LPCSTR,LPCSTR,UINT);\n((PFN)q)(NULL,\"Confirm\",\"App\",MB_OKCANCEL);\nHINTERNET ih=InternetOpenA(\"ua\",INTERNET_OPEN_TYPE_DIRECT,NULL,NULL,0);\nconst char* url=\"https://cnc.example.net/api\";\nHINTERNET s=InternetOpenUrlA(ih,url,NULL,0,INTERNET_FLAG_SECURE,0);\nSleep(3);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst char* mac=\"08-00-27-AA-BB-CC\";\nBOOL oui=(strstr(mac,\"08-00-27\")!=NULL)||(strstr(mac,\"00-05-69\")!=NULL);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nBYTE src[8]={1,2,3,4,5,6,7,8};\nBYTE dst[8];\nfor(size_t i=0;i<8;i++) dst[i]=src[i]^0x77;\nconst char* b64=\"T0s=\";\nunsigned char bin[64];DWORD binLen=0;\nCryptStringToBinaryA(b64,0,CRYPT_STRING_BASE64,bin,&binLen,NULL,NULL);\nBCRYPT_ALG_HANDLE hAlg=NULL;BCRYPT_HASH_HANDLE hHash=NULL;\nDWORD cb=0,objLen=0;UCHAR obj[256];UCHAR digest[32];\nBCryptOpenAlgorithmProvider(&hAlg,BCRYPT_SHA256_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb,0);\nBCryptCreateHash(hAlg,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)bin,(ULONG)binLen,0);\nBCryptFinishHash(hHash,digest,sizeof(digest),0);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "SendMessageA(HWND_BROADCAST,WM_NULL,0,0);"
+    }
+  },
+  {
+    "title": "検体18",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: XOR難読化処理の検証のために使用された鍵の10進数表現は \n 102 → 2-1 (p.2)へ　　103 → 2-2 (p.3)へ",
+          "2-1: 受信データの復号処理として、EVP_DecodeBlockによるBase64エンコードが行われていた。\n YES → 3-3 (p.7)へ　　NO → 3-1 (p.5)へ",
+          "2-2: 実行状態の可視化やデバッグ目的で、OutputDebugStringA(\"probe\")が呼び出されていた。\n YES → 3-4 (p.8)へ　　NO → 3-2 (p.6)へ",
+          "3-1: 実行状態の通知とログ出力のために、通知音と同時にOutputDebugStringAが呼び出されていた。\n この通知音を鳴らす処理を行っている行を特定せよ。",
+          "3-2: スレッドの制御と短時間待機のために、サスペンド状態で作成されたスレッドが再開され、終了処理が行われていた。\n サスペンド処理を行っている行を特定せよ。",
+          "3-3: HTTPS通信を行うために、WinHTTPを用いて /api へのGETリクエストと応答受信が実行されていた。\n リクエスト送信処理を行っている行を特定せよ。",
+          "3-4: 受信データの検証のために、BCryptによるハッシュ化処理が行われていた。\n この処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_18(void){\nSleep(1);\nMessageBeep(MB_ICONINFORMATION);\nHMODULE u=LoadLibraryW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Update\",L\"App\",MB_OK);\nHINTERNET h=WinHttpOpen(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"alpha.example.net\";\nHINTERNET c=WinHttpConnect(h,host,443,0);\nHINTERNET r=WinHttpOpenRequest(c,L\"GET\",L\"/api\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\nWinHttpSendRequest(r,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\nWinHttpReceiveResponse(r,NULL);\nOutputDebugStringA(\"probe\");\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nconst WCHAR* mac=L\"00:05:69:00:00:00\";\nBOOL oui=(wcsstr(mac,L\"00:05:69\")!=NULL)||(wcsstr(mac,L\"08:00:27\")!=NULL);\nBYTE src[8]={1,2,3,4,5,6,7,8};\nBYTE dst[8];\nfor(size_t i=0;i<8;i++) dst[i]=src[i]^0x66;\nCHAR b64in[]=\"T0s=\";\nunsigned char bin[32];\nint bl=EVP_DecodeBlock(bin,(const unsigned char*)b64in,(int)strlen(b64in));\nBCRYPT_ALG_HANDLE hAlg=NULL;BCRYPT_HASH_HANDLE hHash=NULL;\nDWORD cb=0,objLen=0;UCHAR obj[256];UCHAR digest[32];\nBCryptOpenAlgorithmProvider(&hAlg,BCRYPT_SHA256_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb,0);\nBCryptCreateHash(hAlg,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)bin,(ULONG)(bl>0?bl:0),0);\nBCryptFinishHash(hHash,digest,sizeof(digest),0);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(3);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "MessageBeep(MB_ICONINFORMATION);"
+    }
+  },
+  {
+    "title": "検体19",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1:暗号コンテキストの後処理のうち、解放処理は行われていない。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: ステータス取得のために、HTTPリクエストのパスとして/statusが指定されていた。\n YES → 3-3 (p.7)へ　　NO → 3-1 (p.5)へ",
+          "2-2: XOR 難読化処理の検証のために使用された鍵の10進数表現は \n 85 → 3-4 (p.8)へ　　80 → 3-2 (p.6)へ",
+          "3-1:データの難読化処理として、XOR 変換後に Base64 エンコードが行われていた。\n この変換処理を行っている行を特定せよ。",
+          "3-2: プロセス内でデータを操作するために、PAGE_READWRITEの領域を確保しWriteProcessMemoryが使用されていた。\n この処理を行っている行を特定せよ。",
+          "3-3: SHA-1ハッシュ値の生成を目的として、BCryptによる処理が行われていた。\n HashDataを呼び出している行を特定せよ。",
+          "3-4: HTTPS通信を行うために、WinHTTPを用いてGETリクエストと応答受信が実行されていた。\n リクエスト送信を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_19(void){\nSleep(1);\nHMODULE u=LoadLibraryW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Hello\",L\"Notice\",MB_OK|MB_ICONWARNING);\nHINTERNET h=WinHttpOpen(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"gateway.example.net\";\nHINTERNET c=WinHttpConnect(h,host,8443,0);\nHINTERNET r=WinHttpOpenRequest(c,L\"GET\",L\"/status\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\nWinHttpSendRequest(r,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\nWinHttpReceiveResponse(r,NULL);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE; CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nconst WCHAR* mac=L\"08:00:27:AA:BB:CC\";\nBOOL oui=(wcsstr(mac,L\"08:00:27\")!=NULL)||(wcsstr(mac,L\"00:05:69\")!=NULL);\nBYTE src[8]={1,2,3,4,5,6,7,8};\nBYTE dst[8];\nfor(size_t i=0;i<8;i++) dst[i]=src[i]^0x55;\nCHAR b64[64]={0}; DWORD b64Len=64;\nCryptBinaryToStringA(dst,8,CRYPT_STRING_BASE64,b64,&b64Len);\nBCRYPT_ALG_HANDLE hAlg=NULL; BCRYPT_HASH_HANDLE hHash=NULL;\nDWORD cb=0,objLen=0; UCHAR obj[256]; UCHAR digest[20];\nBCryptOpenAlgorithmProvider(&hAlg,BCRYPT_SHA1_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb,0);\nBCryptCreateHash(hAlg,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)b64,(ULONG)strlen(b64),0);\nBCryptFinishHash(hHash,digest,sizeof(digest),0);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0; const char* s=\"OK\";\nWriteProcessMemory(hp,mem,s,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(3);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "r=WinHttpOpenRequest(c,L\"GET\",L\"/status\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);"
+    }
+  },
+  {
+    "title": "検体20",
+    "level": "Normal",
+    "timeLimitSec": 300,
+    "baseScore": 500,
+    "roles": {
+      "A": {
+        "view": [
+          "1: TLS通信を行うために、接続ポートとして844が使用されていた。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: 暗号化データの整合性検証のために、SHA-256によるハッシュ初期化が行われていた。\n YES → 3-3 (p.7)へ　　NO → 3-1 (p.5)へ",
+          "2-2: 既知APIエンドポイントへの到達を確認するため、宛先ホストとしてend.example.com が指定されていた。\n YES → 3-4 (p.8)へ　　NO → 3-2 (p.6)へ",
+          "3-1: HTTPS 通信のために、WinHttpConnectを使って8443 ポートで接続セッションが確立されていた。\n この処理を行っている行を特定せよ。",
+          "3-2: スレッドの制御と短時間待機のためにResumeThreadの後にSleepと同期処理が行われていた。\n この同期処理を行っている行を特定せよ。",
+          "3-3: 暗号化されたデータの整合性検証のために、SHA-256ダイジェストの計算が行われていた。\n この計算処理を行っている行を特定せよ。",
+          "3-4: データの難読化と暗号化処理として、XOR後のBase64エンコードとOpenSSL AESの計算が連続して行われていた。\n AESの計算が行われている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_20(void){\nSleep(1);\nHMODULE u=GetModuleHandleW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Hi\",L\"Title\",MB_OK);\nOutputDebugStringA(\"shown\");\nHINTERNET h=WinHttpOpen(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"api.example.com\";\nHINTERNET c=WinHttpConnect(h,host,8443,0);\nHINTERNET r=WinHttpOpenRequest(c,L\"GET\",L\"/api\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\nWinHttpSendRequest(r,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\nWinHttpReceiveResponse(r,NULL);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst char* mac=\"08-00-27-AA-BB-CC\";\nBOOL oui=(strstr(mac,\"08-00-27\")!=NULL)||(strstr(mac,\"00-05-69\")!=NULL);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nBYTE src[8]={1,2,3,4,5,6,7,8};\nBYTE dst[8];\nfor(size_t i=0;i<8;i++) dst[i]=src[i]^0x44;\nCHAR b64[64]={0};DWORD b64Len=64;\nCryptBinaryToStringA(dst,8,CRYPT_STRING_BASE64,b64,&b64Len);\nEVP_CIPHER_CTX* cctx=EVP_CIPHER_CTX_new();\nEVP_EncryptInit_ex(cctx,EVP_aes_256_cbc(),NULL,(const unsigned char)\"K\",(const unsigned char)\"I\");\nint outlen=0;unsigned char out[64];\nEVP_EncryptUpdate(cctx,out,&outlen,(const unsigned char*)b64,(int)strlen(b64));\nEVP_MD_CTX* mctx=EVP_MD_CTX_new();unsigned char digest[32];\nEVP_DigestInit_ex(mctx,EVP_sha256(),NULL);\nEVP_DigestUpdate(mctx,out,outlen);\nEVP_DigestFinal_ex(mctx,digest,NULL);\nEVP_MD_CTX_free(mctx);EVP_CIPHER_CTX_free(cctx);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(3);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "WaitForSingleObject(th,10);"
+    }
+  },
+  {
+    "title": "検体21",
+    "level": "Hard",
+    "timeLimitSec": 480,
+    "baseScore": 650,
+    "roles": {
+      "A": {
+        "view": [
+          [
+            "1: GetProcAddressの呼び出し回数（全体）は \n YES → 7回 (p.2)へ　　6回 → 2-2 (p.3)へ",
+            "2-1: HTTPリクエストはTLSを明示しており、WINHTTP_FLAG_SECUREが指定されていた。\n YES → 3-3 (p.6)へ　　NO → 3-1 (p.4)へ",
+            "2-2: XORローリング鍵の長さは4バイトである。\n YES → 3-2 (p.5)へ　　NO → 3-4 (p.7)へ",
+            "3-1: GUIを表示してユーザーに操作を促すために、MessageBoxWが関数ポインタ経由で呼び出されていた。\n この処理を行っている行を特定せよ。",
+            "3-2: 仮想環境の検知を目的として、デバイス名に特定のベンダ文字列が含まれているかを照合していた。\n この処理を行っている行を特定せよ。",
+            "3-3: HTTPリクエストを生成するために、WinHttpOpenRequestが関数ポインタ経由で呼び出されていた。\n この処理を行っている行を特定せよ。",
+            "3-4: XOR鍵を使ってバイト列を変換することで、データの可読性を下げていた。\n この処理を行っている行を特定せよ。"
+          ]
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_21(void){\nSleep(1);\nHMODULE u=GetModuleHandleW(L\"user32.dll\");\nFARPROC px=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)px)(NULL,L\"Update\",L\"App\",MB_OKCANCEL);\nSetLastError(0);\nHMODULE w=LoadLibraryW(L\"winhttp.dll\");\ntypedef HINTERNET (WINAPI *PWHOpen)(LPCWSTR,DWORD,LPCWSTR,LPCWSTR,DWORD);\ntypedef HINTERNET (WINAPI *PWHConnect)(HINTERNET,LPCWSTR,INTERNET_PORT,DWORD);\ntypedef HINTERNET (WINAPI *PWHOpenRequest)(HINTERNET,LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR const*,DWORD);\ntypedef BOOL (WINAPI *PWHSnd)(HINTERNET,LPCWSTR,DWORD,LPVOID,DWORD,DWORD,DWORD_PTR);\ntypedef BOOL (WINAPI *PWHRecv)(HINTERNET,LPVOID);\nFARPROC fOpen=GetProcAddress(w,\"WinHttpOpen\");\nFARPROC fConn=GetProcAddress(w,\"WinHttpConnect\");\nFARPROC fReq=GetProcAddress(w,\"WinHttpOpenRequest\");\nFARPROC fSend=GetProcAddress(w,\"WinHttpSendRequest\");\nFARPROC fRecv=GetProcAddress(w,\"WinHttpReceiveResponse\");\nHINTERNET h=((PWHOpen)fOpen)(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"edge.example.net\";\nHINTERNET c=((PWHConnect)fConn)(h,host,443,0);\nHINTERNET r=((PWHOpenRequest)fReq)(c,L\"GET\",L\"/edge\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\n((PWHSnd)fSend)(r,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\n((PWHRecv)fRecv)(r,NULL);\nSleep(4);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nint info[4]={0};\n__cpuid(info,1);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nconst char* mac=\"08-00-27-AA-BB-CC\";\nBOOL oui=(strstr(mac,\"08-00-27\")!=NULL)||(strstr(mac,\"00-05-69\")!=NULL);\nBYTE inb[16]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};\nBYTE outb[16];BYTE key[4]={0x3C,0x21,0x55,0x89};\nfor(size_t i=0;i<16;i++) outb[i]=inb[i]^key[i%4];\nCHAR b64[128]={0};DWORD b64Len=128;\nCryptBinaryToStringA(outb,16,CRYPT_STRING_BASE64,b64,&b64Len);\nEVP_CIPHER_CTX* cctx=EVP_CIPHER_CTX_new();\nEVP_EncryptInit_ex(cctx,EVP_aes_256_cbc(),NULL,(const unsigned char*)\"K\",(const unsigned char*)\"I\");\nunsigned char enc[64];int elen=0;\nEVP_EncryptUpdate(cctx,enc,&elen,(const unsigned char*)b64,(int)strlen(b64));\nBCRYPT_ALG_HANDLE hAlg=NULL;BCRYPT_HASH_HANDLE hHash=NULL;\nDWORD cb=0,objLen=0;UCHAR obj[256];UCHAR digest[32];\nBCryptOpenAlgorithmProvider(&hAlg,BCRYPT_SHA256_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb,0);\nBCryptCreateHash(hAlg,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)enc,(ULONG)elen,0);\nBCryptFinishHash(hHash,digest,sizeof(digest),0);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(7);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "BOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);"
+    }
+  },
+  {
+    "title": "検体22",
+    "level": "Hard",
+    "timeLimitSec": 480,
+    "baseScore": 650,
+    "roles": {
+      "A": {
+        "view": [
+          "1: WinHTTP主要関数の動的解決件数は \n 5件 → 2-1 (p.2)へ　　3件 → 2-2 (p.3)へ",
+          "2-1: 暗号モードはAES-GCMである。\n YES → 3-2 (p.5)へ　　NO → 3-3 (p.6)へ",
+          "2-2: 接続先ポート番号は \n 8443 → 3-4 (p.7)へ　　9933 → 3-1 (p.4)へ",
+          "3-1: GUI表示機能を使う準備として、MessageBoxWを動的に解決している行はどれですか？",
+          "3-2: AES-256-GCM暗号化を行う準備として、暗号コンテキストを初期化している行はどれですか？",
+          "3-3: OutputDebugStringAを使って\"note\"という文字列をログ出力している行はどれですか？",
+          "3-4: WM_NULLをブロードキャスト送信している行はどれですか？"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_22(void){\nSleep(1);\nSendMessageA(HWND_BROADCAST,WM_NULL,0,0);\nOutputDebugStringA(\"note\");\nHMODULE u=LoadLibraryW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Hi\",L\"App\",MB_OK);\nSleep(3);\nHMODULE w=LoadLibraryW(L\"winhttp.dll\");\ntypedef HINTERNET (WINAPI *PWHOpen)(LPCWSTR,DWORD,LPCWSTR,LPCWSTR,DWORD);\ntypedef HINTERNET (WINAPI *PWHConnect)(HINTERNET,LPCWSTR,INTERNET_PORT,DWORD);\ntypedef HINTERNET (WINAPI *PWHOpenRequest)(HINTERNET,LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR const*,DWORD);\ntypedef BOOL (WINAPI *PWHSnd)(HINTERNET,LPCWSTR,DWORD,LPVOID,DWORD,DWORD,DWORD_PTR);\ntypedef BOOL (WINAPI *PWHRecv)(HINTERNET,LPVOID);\nFARPROC fOpen=GetProcAddress(w,\"WinHttpOpen\");\nFARPROC fConn=GetProcAddress(w,\"WinHttpConnect\");\nFARPROC fReq=GetProcAddress(w,\"WinHttpOpenRequest\");\nFARPROC fSend=GetProcAddress(w,\"WinHttpSendRequest\");\nFARPROC fRecv=GetProcAddress(w,\"WinHttpReceiveResponse\");\nHINTERNET h=((PWHOpen)fOpen)(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"api.example.com\";\nHINTERNET c=((PWHConnect)fConn)(h,host,9933,0);\nHINTERNET wr=((PWHOpenRequest)fReq)(c,L\"GET\",L\"/api\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\n((PWHSnd)fSend)(wr,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\n((PWHRecv)fRecv)(wr,NULL);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst char* mac=\"00-0C-29-12-34-56\";\nBOOL oui=(strstr(mac,\"00-0C-29\")!=NULL)||(strstr(mac,\"08-00-27\")!=NULL);\nOutputDebugStringA(\"mac\");\nEVP_CIPHER_CTX* cctx=EVP_CIPHER_CTX_new();\nEVP_EncryptInit_ex(cctx,EVP_aes_256_gcm(),NULL,(const unsigned char*)\"K\",(const unsigned char*)\"I\");\nunsigned char out[128];int outlen=0;\nEVP_EncryptUpdate(cctx,out,&outlen,(const unsigned char*)\"DATA\",4);\nunsigned char b64[256];\nEVP_EncodeBlock(b64,(const unsigned char*)\"DATA\",4);\nEVP_MD_CTX* mctx=EVP_MD_CTX_new();unsigned char digest[32];\nEVP_DigestInit_ex(mctx,EVP_sha256(),NULL);\nEVP_DigestUpdate(mctx,out,outlen);\nEVP_DigestFinal_ex(mctx,digest,NULL);\nEVP_MD_CTX_free(mctx);EVP_CIPHER_CTX_free(cctx);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wrb=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wrb);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(4);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "FARPROC q=GetProcAddress(u,\"MessageBoxW\");"
+    }
+  },
+  {
+    "title": "検体23",
+    "level": "Hard",
+    "timeLimitSec": 480,
+    "baseScore": 650,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 暗号化入力バイト数の平文は \n 16バイト→ 2-2 (p.3)へ　　20バイト → 2-2 (p.2)へ",
+          "2-1: 接続先IPはTEST-NET-3に含まれていることが確認された。\n YES → 3-2 (p.5)へ　　NO → 3-3 (p.6)へ",
+          "2-2: Base64はCryptStringToBinaryAでデコードされていたことが確認された。\n YES → 3-1 (p.4)へ　　NO → 3-4 (p.7)へ",
+          "3-1: Base64形式の文字列を元のバイナリデータに復元するために、CryptStringToBinaryAによるデコード処理が行われていた。\n この処理を行っている行を特定せよ。",
+          "3-2: 通信対象のIPアドレスとして、TEST-NET-3のアドレスがinet_ptonによって設定されていた。\n この処理を行っている行を特定せよ。",
+          "3-3: TCP通信を行うために、socket関数によってソケットが生成されていた。\n この処理を行っている行を特定せよ。",
+          "3-4: AES暗号化を行うために、CNGの暗号APIでデータが暗号化されていた。\nこの処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_23(void){\nSleep(1);\nHMODULE u=LoadLibraryW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Hello\",L\"Notice\",MB_OK|MB_ICONWARNING);\nOutputDebugStringA(\"shown\");\nSleep(3);\nSOCKET s=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);\nstruct sockaddr_in a;memset(&a,0,sizeof(a));\na.sin_family=AF_INET; a.sin_port=htons(8443);\ninet_pton(AF_INET,\"203.0.113.200\",&a.sin_addr);\nconnect(s,(struct sockaddr*)&a,sizeof(a));\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nint info[4]={0};\n__cpuid(info,1);\nconst char* mac=\"00-0C-29-12-34-56\";\nBOOL oui=(strstr(mac,\"00-0C-29\")!=NULL)||(strstr(mac,\"08-00-27\")!=NULL);\nBCRYPT_ALG_HANDLE hAlg=NULL;BCryptOpenAlgorithmProvider(&hAlg,BCRYPT_AES_ALGORITHM,NULL,0);\nBCRYPT_KEY_HANDLE hKey=NULL;UCHAR iv[16]={0};\nBYTE src[16]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};\nBYTE enc[32];ULONG cb=0;\nBCryptEncrypt(hKey,(PUCHAR)src,(ULONG)16,NULL,iv,sizeof(iv),enc,(ULONG)sizeof(enc),&cb,0);\nconst char* b64=\"T0s=\";unsigned char bin[64];DWORD binLen=0;\nCryptStringToBinaryA(b64,0,CRYPT_STRING_BASE64,bin,&binLen,NULL,NULL);\nBCRYPT_ALG_HANDLE hAlg2=NULL;BCRYPT_HASH_HANDLE hHash=NULL;DWORD objLen=0,cb2=0;UCHAR obj[256];UCHAR digest[20];\nBCryptOpenAlgorithmProvider(&hAlg2,BCRYPT_SHA1_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg2,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb2,0);\nBCryptCreateHash(hAlg2,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)bin,(ULONG)binLen,0);\nBCryptFinishHash(hHash,digest,sizeof(digest),0);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(4);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "CryptStringToBinaryA(b64,0,CRYPT_STRING_BASE64,bin,&binLen,NULL,NULL);"
+    }
+  },
+  {
+    "title": "検体24",
+    "level": "Hard",
+    "timeLimitSec": 480,
+    "baseScore": 650,
+    "roles": {
+      "A": {
+        "view": [
+          "1: 使用しているネットワークAPIはWinINetである。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: GetProcAddressの呼び出し回数（WinINet関連）は\n 4回 → 3-2 (p.5)へ　　2回 → 3-4 (p.7)へ",
+          "2-2: INTERNET_FLAG_SECUREが指定されていたことが確認された。\n YES → 3-3 (p.6)へ　　NO → 3-1 (p.4)へ",
+          "3-1: API呼び出しのエラー状態をリセットするために、SetLastErrorが呼び出されていた。この処理を行っている行を特定せよ。",
+          "3-2: 通信機能を使う準備として、InternetOpenUrlAをGetProcAddressで動的に解決していた。この処理を行っている行を特定せよ。",
+          "3-3: HTTPS通信を行うために、TLSを明示してURLを開いていた。この処理を行っている行を特定せよ。",
+          "3-4: RSA OAEP方式を用いて、公開鍵による暗号化が実行されていた。この処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_24(void){\nSleep(1);\nHMODULE u=GetModuleHandleW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Hello\",L\"Notice\",MB_OK|MB_ICONWARNING);\nSetLastError(0);\nHMODULE wi=LoadLibraryW(L\"wininet.dll\");\ntypedef HINTERNET (WINAPI *PInetOpenA)(LPCSTR,DWORD,LPCSTR,LPCSTR,DWORD);\ntypedef HINTERNET (WINAPI *PInetOpenUrlA)(HINTERNET,LPCSTR,LPCSTR,DWORD,DWORD,DWORD);\nFARPROC fOpen=GetProcAddress(wi,\"InternetOpenA\");\nFARPROC fUrl=GetProcAddress(wi,\"InternetOpenUrlA\");\nHINTERNET ih=((PInetOpenA)fOpen)(\"ua\",INTERNET_OPEN_TYPE_DIRECT,NULL,NULL,0);\nconst char* url=\"https://cnc.example.net/api\";\nHINTERNET hurl=((PInetOpenUrlA)fUrl)(ih,url,NULL,0,INTERNET_FLAG_SECURE,0);\nSleep(3);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst WCHAR* dev=L\"VirtualBox Device\";\nBOOL vm=(wcsstr(dev,L\"VirtualBox\")!=NULL)||(wcsstr(dev,L\"VMware\")!=NULL);\nconst char* mac=\"00-0C-29-12-34-56\";\nBOOL oui=(strstr(mac,\"00-0C-29\")!=NULL)||(strstr(mac,\"08-00-27\")!=NULL);\nRSA* rsa=RSA_new();\nunsigned char plain[8]={1,2,3,4,5,6,7,8};\nunsigned char cipher[64];\nint rn=RSA_public_encrypt(8,plain,cipher,rsa,RSA_PKCS1_OAEP_PADDING);\nunsigned char bin[64];\nconst char* b64=\"T0s=\";\nEVP_DecodeBlock(bin,(const unsigned char*)b64,(int)strlen(b64));\nBCRYPT_ALG_HANDLE hAlg=NULL;BCRYPT_HASH_HANDLE hHash=NULL;DWORD objLen=0,cb=0;UCHAR obj[256];UCHAR digest[20];\nBCryptOpenAlgorithmProvider(&hAlg,BCRYPT_SHA1_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb,0);\nBCryptCreateHash(hAlg,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)bin,(ULONG)strlen((const char*)bin),0);\nBCryptFinishHash(hHash,digest,sizeof(digest),0);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nSleep(4);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "rn=RSA_public_encrypt(8,plain,cipher,rsa,RSA_PKCS1_OAEP_PADDING);"
+    }
+  },
+  {
+    "title": "検体25",
+    "level": "Hard",
+    "timeLimitSec": 480,
+    "baseScore": 650,
+    "roles": {
+      "A": {
+        "view": [
+          "1: OutputDebugStringA(\"note\") は呼び出されている。\n YES → 2-1 (p.2)へ　　NO → 2-2 (p.3)へ",
+          "2-1: XORローリング鍵の長さは\n 4バイト → 3-3 (p.6)へ　　16バイト → 3-1 (p.4)へ",
+          "2-2: HTTPリクエストのパスは /edgeである\n YES → 3-2 (p.5)へ　　NO → 3-4 (p.7)へ",
+          "3-1: GUIダイアログを表示するために、関数ポインタ経由でMessageBoxWが呼び出されていた。\n この処理を行っている行を特定せよ。",
+          "3-2: WinHttpOpenRequestをAPI名で動的に取得していた。\n この処理を行っている行を特定せよ。",
+          "3-3: バイナリデータをBase64形式に変換していた。\n この処理を行っている行を特定せよ。",
+          "3-4: システム全体にWM_NULLメッセージをブロードキャスト送信していた。\nこの処理を行っている行を特定せよ。"
+        ]
+      },
+      "B": {
+        "view": "DWORD WINAPI stub(LPVOID p){return 0;}\nvoid specimen_25(void){\nSleep(1);\nSendMessageA(HWND_BROADCAST,WM_NULL,0,0);\nOutputDebugStringA(\"note\");\nHMODULE u=LoadLibraryW(L\"user32.dll\");\nFARPROC q=GetProcAddress(u,\"MessageBoxW\");\ntypedef int (WINAPI *PFN)(HWND,LPCWSTR,LPCWSTR,UINT);\n((PFN)q)(NULL,L\"Hi\",L\"App\",MB_OK);\nSleep(10);\nHMODULE w=LoadLibraryW(L\"winhttp.dll\");\ntypedef HINTERNET (WINAPI *PWHOpen)(LPCWSTR,DWORD,LPCWSTR,LPCWSTR,DWORD);\ntypedef HINTERNET (WINAPI *PWHConnect)(HINTERNET,LPCWSTR,INTERNET_PORT,DWORD);\ntypedef HINTERNET (WINAPI *PWHOpenRequest)(HINTERNET,LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR,LPCWSTR const*,DWORD);\ntypedef BOOL (WINAPI *PWHSnd)(HINTERNET,LPCWSTR,DWORD,LPVOID,DWORD,DWORD,DWORD_PTR);\ntypedef BOOL (WINAPI *PWHRecv)(HINTERNET,LPVOID);\nFARPROC fOpen=GetProcAddress(w,\"WinHttpOpen\");\nFARPROC fConn=GetProcAddress(w,\"WinHttpConnect\");\nFARPROC fReq=GetProcAddress(w,\"WinHttpOpenRequest\");\nFARPROC fSend=GetProcAddress(w,\"WinHttpSendRequest\");\nFARPROC fRecv=GetProcAddress(w,\"WinHttpReceiveResponse\");\nHINTERNET h=((PWHOpen)fOpen)(L\"Demo/1.0\",WINHTTP_ACCESS_TYPE_DEFAULT_PROXY,NULL,NULL,0);\nLPCWSTR host=L\"edge.example.net\";\nHINTERNET c=((PWHConnect)fConn)(h,host,443,0);\nHINTERNET r=((PWHOpenRequest)fReq)(c,L\"GET\",L\"/edge\",NULL,WINHTTP_NO_REFERER,WINHTTP_DEFAULT_ACCEPT_TYPES,WINHTTP_FLAG_SECURE);\n((PWHSnd)fSend)(r,WINHTTP_NO_ADDITIONAL_HEADERS,0,NULL,0,0,0);\n((PWHRecv)fRecv)(r,NULL);\nBOOL dbg=IsDebuggerPresent();\nBOOL rdbg=FALSE;CheckRemoteDebuggerPresent(GetCurrentProcess(),&rdbg);\nint rs=GetSystemMetrics(SM_REMOTESESSION);\nconst char* mac=\"00-0C-29-12-34-56\";\nBOOL oui=(strstr(mac,\"00-0C-29\")!=NULL)||(strstr(mac,\"08-00-27\")!=NULL);\nOutputDebugStringA(\"mac\");\nBYTE inb[16]={1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16};\nBYTE outb[16];BYTE key[4]={0x21,0x37,0x5C,0xA9};\nfor(size_t i=0;i<16;i++) outb[i]=inb[i]^key[i%4];\nCHAR b64[128]={0};DWORD b64Len=128;\nCryptBinaryToStringA(outb,16,CRYPT_STRING_BASE64,b64,&b64Len);\nBCRYPT_ALG_HANDLE hAlg=NULL;BCRYPT_HASH_HANDLE hHash=NULL;DWORD objLen=0,cb=0;UCHAR obj[256];UCHAR digest[32];\nBCryptOpenAlgorithmProvider(&hAlg,BCRYPT_SHA256_ALGORITHM,NULL,0);\nBCryptGetProperty(hAlg,BCRYPT_OBJECT_LENGTH,(PUCHAR)&objLen,sizeof(objLen),&cb,0);\nBCryptCreateHash(hAlg,&hHash,obj,sizeof(obj),NULL,0,0);\nBCryptHashData(hHash,(PUCHAR)b64,(ULONG)strlen(b64),0);\nBCryptFinishHash(hHash,digest,sizeof(digest),0);\nLPVOID mem=VirtualAlloc(NULL,256,MEM_COMMIT|MEM_RESERVE,PAGE_READWRITE);\nHANDLE hp=GetCurrentProcess();\nSIZE_T wr=0;const char* s2=\"OK\";\nWriteProcessMemory(hp,mem,s2,2,&wr);\nHANDLE th=CreateThread(NULL,0,stub,NULL,CREATE_SUSPENDED,NULL);\nResumeThread(th);\nWaitForSingleObject(th,10);\nCloseHandle(th);\n}"
+      }
+    },
+    "answer": {
+      "type": "exact",
+      "value": "CryptBinaryToStringA(outb,16,CRYPT_STRING_BASE64,b64,&b64Len);"
+    }
+  }
+]
