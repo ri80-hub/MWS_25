@@ -31,7 +31,7 @@ app.use(express.json()); // Parse JSON request bodies
 app.use(express.static('public')); // Serve static files from /public
 
 // Specify the JSON file to load
-const f_json = 'challenges.json'; // default: 'challenges.json'
+const f_json = 'sample_challenges.json'; // default: 'sample_dchallenges.json'
 
 // Shared state containers
 const rooms = new Map(); // roomId → roomData
@@ -148,7 +148,7 @@ function startRound(roomId) {
   }
 
   // End game if round limit reached
-  if ((r.round ?? 0) >= 3) {
+  if ((r.round ?? 0) >= 1) {
     io.to(roomId).emit('gameFinished', {
       message: 'ゲーム終了！',
       totalscore: r.cumulativeScore ?? 0
